@@ -225,13 +225,19 @@ github-manager/
 ### 📄 Lisensi
 ```bash
 MIT License - Bebas digunakan, dimodifikasi, dan didistribusikan.
+```
+---
 
 ### 👨‍💻 Author
 
+```bash
 cpm_jhon - GitHub
+```
+---
 
 ### 🙏 Credits
 
+``` bash
 * Icons by Font Awesome
 * ZIP library by JSZip
 * Font by Google Fonts
