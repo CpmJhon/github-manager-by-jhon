@@ -220,9 +220,9 @@ github-manager/
 
 ---
 
-```
-### 📄 Lisensi
 
+### 📄 Lisensi
+```
 MIT License - Bebas digunakan, dimodifikasi, dan didistribusikan.
 
 ### 👨‍💻 Author
@@ -237,9 +237,9 @@ cpm_jhon - GitHub
 ```
 ---
 
-```
-## Cara Menggunakan:
 
+## Cara Menggunakan:
+```
 1. **Buat folder** dengan nama `github-manager`
 2. **Buat subfolder** `css` dan `js`
 3. **Copy paste** masing-masing kode ke file yang sesuai:
