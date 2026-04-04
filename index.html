@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>GitHub Manager | by cpm_jhon</title>
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-container">
+  <!-- Header dengan style ASCII art -->
+  <div class="header">
+    <div class="ascii-badge">
+      <i class="fab fa-github-alt"></i>
+      <span>===== GitHub Manager by cpm_jhon =====</span>
+      <i class="fas fa-code-branch"></i>
+    </div>
+    <p class="subtitle">kelola repository, upload proyek, dan otomatisasi</p>
+  </div>
+
+  <!-- Panel Autentikasi -->
+  <div class="card auth-card" id="authCard">
+    <div class="card-header">
+      <i class="fas fa-key"></i>
+      <h3>🔐 Autentikasi GitHub</h3>
+    </div>
+    <div class="input-group">
+      <label><i class="fas fa-user"></i> Username GitHub</label>
+      <input type="text" id="githubUsername" placeholder="cpm_jhon" autocomplete="username">
+    </div>
+    <div class="input-group">
+      <label><i class="fas fa-token"></i> Personal Access Token (PAT)</label>
+      <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      <small class="input-help">Token memerlukan izin: repo, delete_repo, workflow</small>
+    </div>
+    <div style="display: flex; justify-content: flex-end;">
+      <button id="authBtn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Verifikasi & Simpan</button>
+    </div>
+    <div id="authStatus" class="status-message" style="display: none;"></div>
+  </div>
+
+  <!-- Menu Utama -->
+  <div id="mainMenu" style="display: none;">
+    <div class="card menu-card">
+      <div class="grid-buttons">
+        <button id="showCreateRepo" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Buat Repository</button>
+        <button id="showDeleteRepo" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Hapus Repository</button>
+        <button id="showUploadProyek" class="btn btn-success"><i class="fas fa-cloud-upload-alt"></i> Upload Proyek</button>
+        <button id="showListRepo" class="btn btn-info"><i class="fas fa-list"></i> Daftar Repo</button>
+      </div>
+      <hr>
+      <!-- Panel Dinamis untuk aksi -->
+      <div id="actionPanel" class="action-panel">
+        <div id="dynamicContent">
+          <div class="empty-state">
+            <i class="fas fa-rocket"></i>
+            <p>Pilih salah satu aksi di atas untuk mengelola repository GitHub mu</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <footer>
+    <i class="fas fa-shield-alt"></i> Token hanya disimpan di memori lokal, tidak pernah dikirim ke server lain. 
+    <i class="fab fa-github"></i>
+  </footer>
+</div>
+
+<!-- Custom JavaScript -->
+<script src="js/script.js"></script>
+</body>
+</html>
