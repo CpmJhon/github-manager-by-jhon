@@ -3,77 +3,144 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>GitHub Manager | by cpm_jhon</title>
-  <!-- Google Fonts & Font Awesome Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <title>GitHub Manager | Cyberpunk Terminal Edition</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- JSZip Library untuk extract ZIP -->
+  <!-- JSZip Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="app-container">
-  <!-- Header dengan style ASCII art -->
-  <div class="header">
-    <div class="ascii-badge">
-      <i class="fab fa-github-alt"></i>
-      <span>===== GitHub Manager by cpm_jhon =====</span>
-      <i class="fas fa-code-branch"></i>
-    </div>
-    <p class="subtitle">kelola repository, upload proyek, dan otomatisasi</p>
-  </div>
-
-  <!-- Panel Autentikasi -->
-  <div class="card auth-card" id="authCard">
-    <div class="card-header">
-      <i class="fas fa-key"></i>
-      <h3>🔐 Autentikasi GitHub</h3>
-    </div>
-    <div class="input-group">
-      <label><i class="fas fa-user"></i> Username GitHub</label>
-      <input type="text" id="githubUsername" placeholder="cpm_jhon" autocomplete="username">
-    </div>
-    <div class="input-group">
-      <label><i class="fas fa-token"></i> Personal Access Token (PAT)</label>
-      <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
-      <small class="input-help">Token memerlukan izin: repo, delete_repo, workflow</small>
-    </div>
-    <div style="display: flex; justify-content: flex-end;">
-      <button id="authBtn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Verifikasi & Simpan</button>
-    </div>
-    <div id="authStatus" class="status-message" style="display: none;"></div>
-  </div>
-
-  <!-- Menu Utama -->
-  <div id="mainMenu" style="display: none;">
-    <div class="card menu-card">
-      <div class="grid-buttons">
-        <button id="showCreateRepo" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Buat Repository</button>
-        <button id="showDeleteRepo" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Hapus Repository</button>
-        <button id="showUploadProyek" class="btn btn-success"><i class="fas fa-cloud-upload-alt"></i> Upload Proyek</button>
-        <button id="showListRepo" class="btn btn-info"><i class="fas fa-list"></i> Daftar Repo</button>
+  <!-- Cyberpunk Grid Overlay -->
+  <div class="cyber-grid"></div>
+  <div class="gradient-orb"></div>
+  
+  <div class="container">
+    <!-- Header -->
+    <div class="cyber-header">
+      <div class="glitch-wrapper">
+        <h1 class="glitch-text" data-text="█║▌│█│║▌║│█║ GITHUB MANAGER █║▌│█│║▌║│█║">
+          █║▌│█│║▌║│█║ GITHUB MANAGER █║▌│█│║▌║│█║
+        </h1>
       </div>
-      <hr>
-      <!-- Panel Dinamis untuk aksi -->
-      <div id="actionPanel" class="action-panel">
-        <div id="dynamicContent">
-          <div class="empty-state">
-            <i class="fas fa-rocket"></i>
-            <p>Pilih salah satu aksi di atas untuk mengelola repository GitHub mu</p>
+      <div class="hacker-tagline">
+        <span class="typing-text">>_ TERMINAL OPERATION SYSTEM v3.0</span>
+      </div>
+      <div class="status-led">
+        <span class="led red"></span>
+        <span class="led yellow"></span>
+        <span class="led green"></span>
+        <span class="led blue"></span>
+      </div>
+    </div>
+
+    <!-- Auth Card -->
+    <div class="glass-card neon-border" id="authCard">
+      <div class="card-header">
+        <i class="fas fa-shield-haltered"></i>
+        <h3>[ AUTHENTICATION_PROTOCOL ]</h3>
+      </div>
+      <div class="input-group-neon">
+        <label><i class="fas fa-user-astronaut"></i> >_ USERNAME::</label>
+        <input type="text" id="githubUsername" placeholder="cyber_hacker" class="cyber-input">
+      </div>
+      <div class="input-group-neon">
+        <label><i class="fas fa-key"></i> >_ PERSONAL_ACCESS_TOKEN::</label>
+        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" class="cyber-input">
+        <small class="input-hint">[!] Token requires: repo, delete_repo, workflow</small>
+      </div>
+      <button id="authBtn" class="neon-btn cyber-btn">
+        <i class="fas fa-plug"></i> [ CONNECT_TO_GITHUB ]
+      </button>
+      <div id="authStatus" class="terminal-message"></div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="mainMenu" style="display: none;">
+      <div class="glass-card neon-border">
+        <div class="user-bar">
+          <div class="user-info">
+            <i class="fas fa-terminal"></i> 
+            <span class="prompt">[root@github]</span>
+            <span class="user-path">~/</span>
+            <span id="currentUser" class="username">-</span>
+          </div>
+          <button id="logoutBtn" class="neon-btn small">
+            <i class="fas fa-power-off"></i> [ DISCONNECT ]
+          </button>
+        </div>
+        
+        <div class="button-grid">
+          <button id="showCreateRepo" class="neon-btn cyber-btn">
+            <i class="fas fa-plus-circle"></i> [ CREATE_REPO ]
+          </button>
+          <button id="showDeleteRepo" class="neon-btn cyber-btn danger">
+            <i class="fas fa-trash-alt"></i> [ DELETE_REPO ]
+          </button>
+          <button id="showUploadProyek" class="neon-btn cyber-btn success">
+            <i class="fas fa-cloud-upload-alt"></i> [ UPLOAD_MODE ]
+          </button>
+          <button id="showListRepo" class="neon-btn cyber-btn info">
+            <i class="fas fa-list"></i> [ LIST_REPOS ]
+          </button>
+        </div>
+        
+        <div id="actionPanel" class="action-panel"></div>
+      </div>
+    </div>
+
+    <!-- Live Terminal Premium -->
+    <div class="terminal-live" id="liveTerminal" style="display: none;">
+      <div class="terminal-header">
+        <div class="terminal-controls">
+          <div class="terminal-dot red"></div>
+          <div class="terminal-dot yellow"></div>
+          <div class="terminal-dot green"></div>
+        </div>
+        <div class="terminal-title">
+          <i class="fas fa-terminal"></i> [ CYBERPUNK_TERMINAL_v3.0 ] — zsh
+        </div>
+        <div class="terminal-status" id="terminalStatus">● ONLINE</div>
+      </div>
+      <div class="terminal-body" id="terminalBody">
+        <div class="terminal-welcome">
+          <pre class="ascii-art">
+╔═══════════════════════════════════════════════════════════════════╗
+║  ██████╗ ██╗   ██╗██████╗ ███████╗██████╗ ██████╗ ██╗   ██╗███╗   ██╗██╗  ██╗
+║  ██╔══██╗╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗██╔══██╗╚██╗ ██╔╝████╗  ██║██║ ██╔╝
+║  ██████╔╝ ╚████╔╝ ██████╔╝█████╗  ██████╔╝██████╔╝ ╚████╔╝ ██╔██╗ ██║█████╔╝ 
+║  ██╔══██╗  ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗██╔══██╗  ╚██╔╝  ██║╚██╗██║██╔═██╗ 
+║  ██████╔╝   ██║   ██████╔╝███████╗██║  ██║██████╔╝   ██║   ██║ ╚████║██║  ██╗
+║  ╚═════╝    ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝
+╚═══════════════════════════════════════════════════════════════════╝
+          </pre>
+          <div class="log-line log-info">> [SYSTEM] Initializing cyberpunk engine v3.0...</div>
+          <div class="log-line log-info">> [SYSTEM] Loading modules... DONE</div>
+          <div class="log-line log-info">> [SYSTEM] Establishing secure channel...</div>
+          <div class="log-line log-info">> [SYSTEM] Ready for operation. Select a task to begin.</div>
+        </div>
+        <div class="cursor-line">
+          <span class="prompt">[root@github]~$</span>
+          <span class="blinking-cursor">_</span>
+        </div>
+      </div>
+      <div class="terminal-footer">
+        <div class="progress-container" id="progressContainer" style="display: none;">
+          <div class="progress-bar-neon">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="progress-stats">
+            <span id="progressPercent">0%</span>
+            <span id="progressText">[ IDLE ]</span>
           </div>
         </div>
       </div>
     </div>
   </div>
-  
-  <footer>
-    <i class="fas fa-shield-alt"></i> Token hanya disimpan di memori lokal, tidak pernah dikirim ke server lain. 
-    <i class="fab fa-github"></i>
-  </footer>
-</div>
 
-<!-- Custom JavaScript -->
-<script src="js/script.js"></script>
+  <script src="js/script.js"></script>
 </body>
 </html>
