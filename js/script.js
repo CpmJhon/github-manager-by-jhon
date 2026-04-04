@@ -1,11 +1,8 @@
-// GitHub Manager Full Script with Terminal Emulator
-// Mempertahankan semua fungsionalitas original + fitur terminal
-
 // State management
 let gitUsername = "";
 let gitToken = "";
 let isAuthenticated = false;
-let pendingFiles = [];
+let pendingFiles = []; // For upload feature
 
 // DOM elements
 let authCard, mainMenuDiv, authBtn, usernameInput, tokenInput;
@@ -28,13 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const showDeleteRepo = document.getElementById('showDeleteRepo');
   const showUploadProyek = document.getElementById('showUploadProyek');
   const showListRepo = document.getElementById('showListRepo');
-  const showTerminal = document.getElementById('showTerminal');
   
   if (showCreateRepo) showCreateRepo.addEventListener('click', () => renderCreateRepoUI());
   if (showDeleteRepo) showDeleteRepo.addEventListener('click', () => renderDeleteRepoUI());
   if (showUploadProyek) showUploadProyek.addEventListener('click', () => renderUploadProyekUI());
   if (showListRepo) showListRepo.addEventListener('click', () => renderListRepoUI());
-  if (showTerminal) showTerminal.addEventListener('click', () => renderTerminalUI());
 });
 
 // Helper functions
@@ -141,11 +136,10 @@ async function authenticateAndVerify() {
     dynamicPanel.innerHTML = `
       <div class="empty-state">
         <i class="fab fa-github"></i>
-        <p>Halo <strong>${escapeHtml(gitUsername)}</strong>, pilih menu untuk mengelola repository.</p>
+        <p>Halo <strong>${gitUsername}</strong>, pilih menu untuk mengelola repository.</p>
         <div class="repo-badge" style="display: inline-block; margin-top: 10px;">✨ siap beraksi ✨</div>
       </div>
     `;
-    addTerminalMessage(`✅ Terhubung ke GitHub sebagai ${gitUsername}`);
     return true;
     
   } catch (err) {
@@ -204,6 +198,106 @@ function fileToBase64(file) {
     reader.onerror = error => reject(error);
   });
 }
+
+// UI: Create Repository
+function renderCreateRepoUI() {
+  dynamicPanel.innerHTML = `
+    <div class="action-title"><i class="fas fa-plus-square"></i> Buat Repository Baru</div>
+    <div class="flex-form">
+      <div class="input-group">
+        <label>Nama Repository *</label>
+        <input type="text" id="newRepoName" placeholder="contoh: my-awesome-project">
+      </div>
+      <div class="input-group">
+        <label>Deskripsi (Opsional)</label>
+        <textarea id="repoDesc" rows="2" placeholder="Deskripsi singkat tentang repository ini"></textarea>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="repoPrivate"> Private Repository
+        </label>
+      </div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <button id="confirmCreateRepo" class="btn btn-primary"><i class="fas fa-check"></i> Buat Sekarang</button>
+        <button id="cancelAction" class="btn btn-outline">Batal</button>
+      </div>
+      <div id="createStatus" class="status-message" style="display: none;"></div>
+    </div>
+  `;
+  
+  document.getElementById('confirmCreateRepo')?.addEventListener('click', async () => {
+    const repoName = document.getElementById('newRepoName')?.value.trim();
+    const desc = document.getElementById('repoDesc')?.value.trim() || "";
+    const isPrivate = document.getElementById('repoPrivate')?.checked || false;
+    const statusDiv = document.getElementById('createStatus');
+    
+    if (!repoName) {
+      showStatus(statusDiv, 'Nama repository harus diisi!', 'error');
+      return;
+    }
+    
+    showStatus(statusDiv, '<i class="fas fa-spinner fa-pulse"></i> Membuat repository...', 'info');
+    try {
+      const result = await createRepository(repoName, desc, isPrivate);
+      showStatus(statusDiv, `✅ Repository "${repoName}" berhasil dibuat!`, 'success');
+      setTimeout(() => renderCreateRepoUI(), 2000);
+    } catch (err) {
+      showStatus(statusDiv, `❌ Gagal: ${err.message}`, 'error');
+    }
+  });
+  
+  document.getElementById('cancelAction')?.addEventListener('click', () => {
+    dynamicPanel.innerHTML = `<div class="empty-state"><i class="fas fa-arrow-left"></i><p>Aksi dibatalkan, pilih menu lain.</p></div>`;
+  });
+}
+
+// UI: Delete Repository
+function renderDeleteRepoUI() {
+  dynamicPanel.innerHTML = `
+    <div class="action-title"><i class="fas fa-trash"></i> Hapus Repository</div>
+    <div class="flex-form">
+      <div class="input-group">
+        <label>Nama Repository yang akan dihapus (PERMANEN)</label>
+        <input type="text" id="deleteRepoName" placeholder="contoh: repo-lama">
+      </div>
+      <div class="input-group">
+        <label>Ketik nama repository untuk konfirmasi</label>
+        <input type="text" id="confirmDeleteName" placeholder="masukkan nama repository">
+      </div>
+      <div style="display: flex; gap: 1rem;">
+        <button id="confirmDeleteRepo" class="btn btn-danger"><i class="fas fa-exclamation-triangle"></i> Hapus Permanen</button>
+        <button id="cancelActionDel" class="btn btn-outline">Batal</button>
+      </div>
+      <div id="deleteStatus" class="status-message" style="display: none;"></div>
+    </div>
+  `;
+  
+  document.getElementById('confirmDeleteRepo')?.addEventListener('click', async () => {
+    const repoName = document.getElementById('deleteRepoName')?.value.trim();
+    const confirmName = document.getElementById('confirmDeleteName')?.value.trim();
+    const statusDiv = document.getElementById('deleteStatus');
+    
+    if (!repoName || confirmName !== repoName) {
+      showStatus(statusDiv, 'Nama repository tidak cocok atau kosong. Ulangi konfirmasi.', 'error');
+      return;
+    }
+    
+    showStatus(statusDiv, '<i class="fas fa-spinner fa-pulse"></i> Menghapus repository...', 'info');
+    try {
+      await deleteRepository(repoName);
+      showStatus(statusDiv, `✅ Repository "${repoName}" berhasil dihapus.`, 'success');
+      setTimeout(() => renderDeleteRepoUI(), 2000);
+    } catch (err) {
+      showStatus(statusDiv, `❌ Gagal hapus: ${err.message}`, 'error');
+    }
+  });
+  
+  document.getElementById('cancelActionDel')?.addEventListener('click', () => {
+    dynamicPanel.innerHTML = `<div class="empty-state"><p>Hapus dibatalkan.</p></div>`;
+  });
+}
+
+// =============== UPLOAD PROYEK WITH ZIP EXTRACTION & PREVIEW ===============
 
 // Process ZIP file and extract contents
 async function processZipFile(zipFile) {
@@ -282,7 +376,6 @@ async function processSelectedFiles(files) {
       if (statusDiv) showStatus(statusDiv, `📦 Extracting ${file.name}...`, 'info');
       const extractedFiles = await processZipFile(file);
       allFiles.push(...extractedFiles);
-      addTerminalMessage(`📦 ZIP ${file.name} diekstrak, ${extractedFiles.length} file`);
       if (statusDiv) setTimeout(() => hideStatus(statusDiv), 2000);
     } else {
       allFiles.push(file);
@@ -301,22 +394,52 @@ async function processSelectedFiles(files) {
   pendingFiles = Array.from(uniqueFiles.values());
   
   updateFilePreview();
-  addTerminalMessage(`📁 ${pendingFiles.length} file siap diupload`);
 }
 
 // Get file icon based on extension
 function getFileIcon(filename) {
   const ext = filename.split('.').pop().toLowerCase();
   const icons = {
-    js: 'fa-js', jsx: 'fa-react', ts: 'fa-code', tsx: 'fa-react',
-    html: 'fa-html5', css: 'fa-css3-alt', scss: 'fa-sass',
-    json: 'fa-file-code', md: 'fa-markdown', txt: 'fa-file-alt',
-    jpg: 'fa-image', jpeg: 'fa-image', png: 'fa-image', gif: 'fa-image',
-    svg: 'fa-image', webp: 'fa-image', mp4: 'fa-video', mp3: 'fa-music',
-    pdf: 'fa-file-pdf', zip: 'fa-file-archive', rar: 'fa-file-archive',
-    exe: 'fa-windows', py: 'fa-python', java: 'fa-java',
-    cpp: 'fa-code', c: 'fa-code', php: 'fa-php', rb: 'fa-gem',
-    go: 'fa-code', rs: 'fa-cogs', vue: 'fa-vuejs', sh: 'fa-terminal'
+    js: 'fa-js',
+    jsx: 'fa-react',
+    ts: 'fa-code',
+    tsx: 'fa-react',
+    html: 'fa-html5',
+    css: 'fa-css3-alt',
+    scss: 'fa-sass',
+    json: 'fa-file-code',
+    md: 'fa-markdown',
+    txt: 'fa-file-alt',
+    jpg: 'fa-image',
+    jpeg: 'fa-image',
+    png: 'fa-image',
+    gif: 'fa-image',
+    svg: 'fa-image',
+    webp: 'fa-image',
+    mp4: 'fa-video',
+    mp3: 'fa-music',
+    pdf: 'fa-file-pdf',
+    zip: 'fa-file-archive',
+    rar: 'fa-file-archive',
+    '7z': 'fa-file-archive',
+    exe: 'fa-windows',
+    py: 'fa-python',
+    java: 'fa-java',
+    cpp: 'fa-code',
+    c: 'fa-code',
+    php: 'fa-php',
+    rb: 'fa-gem',
+    go: 'fa-code',
+    rs: 'fa-cogs',
+    vue: 'fa-vuejs',
+    react: 'fa-react',
+    xml: 'fa-code',
+    yaml: 'fa-code',
+    yml: 'fa-code',
+    toml: 'fa-code',
+    sh: 'fa-terminal',
+    bash: 'fa-terminal',
+    ps1: 'fa-terminal'
   };
   return icons[ext] || 'fa-file';
 }
@@ -328,14 +451,6 @@ function formatFileSize(bytes) {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 // Update file preview list
@@ -421,6 +536,13 @@ function updateFilePreview() {
       }
     });
   });
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Setup semua handler untuk file upload
@@ -535,7 +657,6 @@ async function startUploadProcess() {
       const base64Content = await fileToBase64(file);
       await uploadSingleFile(repo, filePath, base64Content, `${commitMsgInput} (${i + 1}/${pendingFiles.length})`);
       successCount++;
-      addTerminalMessage(`✅ Upload ${filePath}`);
       
       // Mark file as uploaded in preview
       const fileItems = document.querySelectorAll('.tree-file');
@@ -548,7 +669,6 @@ async function startUploadProcess() {
       errorCount++;
       errors.push(`${filePath}: ${err.message}`);
       console.error(`Failed to upload ${filePath}:`, err);
-      addTerminalMessage(`❌ Gagal ${filePath}: ${err.message}`);
       if (progressText) {
         progressText.innerHTML += `<br/><span style="color: #ef4444;">❌ Gagal: ${escapeHtml(filePath)}</span>`;
       }
@@ -565,7 +685,6 @@ async function startUploadProcess() {
   if (errorCount === 0) {
     showStatus(statusDiv, `✅ Sukses! ${successCount} file berhasil diupload ke repository ${repo}`, 'success');
     if (progressText) progressText.innerHTML = `✅ Selesai! ${successCount} file berhasil diupload.`;
-    addTerminalMessage(`🎉 Selesai! ${successCount} file berhasil diupload ke ${repo}`);
     
     // Clear files after successful upload
     setTimeout(() => {
@@ -574,15 +693,14 @@ async function startUploadProcess() {
       if (progressContainer) progressContainer.style.display = 'none';
     }, 3000);
   } else {
-    let errorSummary = `⚠️ ${successCount} berhasil, ${errorCount} gagal.`;
+    let errorSummary = `⚠️ ${successCount} berhasil, ${errorCount} gagal.\n`;
     if (errors.length <= 3) {
-      errorSummary += ' ' + errors.join('; ');
+      errorSummary += errors.join('\n');
     } else {
-      errorSummary += ` ${errors.length} errors terjadi. Cek console untuk detail.`;
+      errorSummary += `${errors.length} errors terjadi. Cek console untuk detail.`;
     }
     showStatus(statusDiv, errorSummary, 'error');
     if (progressText) progressText.innerHTML = `⚠️ Selesai dengan error: ${errorCount} file gagal.`;
-    addTerminalMessage(`⚠️ Upload selesai: ${successCount} sukses, ${errorCount} gagal`);
   }
   
   // Re-enable upload button
@@ -590,108 +708,6 @@ async function startUploadProcess() {
     startUploadBtn.disabled = false;
     startUploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Semua File';
   }
-}
-
-// UI: Create Repository
-function renderCreateRepoUI() {
-  dynamicPanel.innerHTML = `
-    <div class="action-title"><i class="fas fa-plus-square"></i> Buat Repository Baru</div>
-    <div class="flex-form">
-      <div class="input-group">
-        <label>Nama Repository *</label>
-        <input type="text" id="newRepoName" placeholder="contoh: my-awesome-project">
-      </div>
-      <div class="input-group">
-        <label>Deskripsi (Opsional)</label>
-        <textarea id="repoDesc" rows="2" placeholder="Deskripsi singkat tentang repository ini"></textarea>
-      </div>
-      <div class="input-group">
-        <label>
-          <input type="checkbox" id="repoPrivate"> Private Repository
-        </label>
-      </div>
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <button id="confirmCreateRepo" class="btn btn-primary"><i class="fas fa-check"></i> Buat Sekarang</button>
-        <button id="cancelAction" class="btn btn-outline">Batal</button>
-      </div>
-      <div id="createStatus" class="status-message" style="display: none;"></div>
-    </div>
-  `;
-  
-  document.getElementById('confirmCreateRepo')?.addEventListener('click', async () => {
-    const repoName = document.getElementById('newRepoName')?.value.trim();
-    const desc = document.getElementById('repoDesc')?.value.trim() || "";
-    const isPrivate = document.getElementById('repoPrivate')?.checked || false;
-    const statusDiv = document.getElementById('createStatus');
-    
-    if (!repoName) {
-      showStatus(statusDiv, 'Nama repository harus diisi!', 'error');
-      return;
-    }
-    
-    showStatus(statusDiv, '<i class="fas fa-spinner fa-pulse"></i> Membuat repository...', 'info');
-    try {
-      const result = await createRepository(repoName, desc, isPrivate);
-      showStatus(statusDiv, `✅ Repository "${repoName}" berhasil dibuat!`, 'success');
-      addTerminalMessage(`✅ Repository '${repoName}' berhasil dibuat`);
-      setTimeout(() => renderCreateRepoUI(), 2000);
-    } catch (err) {
-      showStatus(statusDiv, `❌ Gagal: ${err.message}`, 'error');
-      addTerminalMessage(`❌ Gagal membuat repository: ${err.message}`);
-    }
-  });
-  
-  document.getElementById('cancelAction')?.addEventListener('click', () => {
-    dynamicPanel.innerHTML = `<div class="empty-state"><i class="fas fa-arrow-left"></i><p>Aksi dibatalkan, pilih menu lain.</p></div>`;
-  });
-}
-
-// UI: Delete Repository
-function renderDeleteRepoUI() {
-  dynamicPanel.innerHTML = `
-    <div class="action-title"><i class="fas fa-trash"></i> Hapus Repository</div>
-    <div class="flex-form">
-      <div class="input-group">
-        <label>Nama Repository yang akan dihapus (PERMANEN)</label>
-        <input type="text" id="deleteRepoName" placeholder="contoh: repo-lama">
-      </div>
-      <div class="input-group">
-        <label>Ketik nama repository untuk konfirmasi</label>
-        <input type="text" id="confirmDeleteName" placeholder="masukkan nama repository">
-      </div>
-      <div style="display: flex; gap: 1rem;">
-        <button id="confirmDeleteRepo" class="btn btn-danger"><i class="fas fa-exclamation-triangle"></i> Hapus Permanen</button>
-        <button id="cancelActionDel" class="btn btn-outline">Batal</button>
-      </div>
-      <div id="deleteStatus" class="status-message" style="display: none;"></div>
-    </div>
-  `;
-  
-  document.getElementById('confirmDeleteRepo')?.addEventListener('click', async () => {
-    const repoName = document.getElementById('deleteRepoName')?.value.trim();
-    const confirmName = document.getElementById('confirmDeleteName')?.value.trim();
-    const statusDiv = document.getElementById('deleteStatus');
-    
-    if (!repoName || confirmName !== repoName) {
-      showStatus(statusDiv, 'Nama repository tidak cocok atau kosong. Ulangi konfirmasi.', 'error');
-      return;
-    }
-    
-    showStatus(statusDiv, '<i class="fas fa-spinner fa-pulse"></i> Menghapus repository...', 'info');
-    try {
-      await deleteRepository(repoName);
-      showStatus(statusDiv, `✅ Repository "${repoName}" berhasil dihapus.`, 'success');
-      addTerminalMessage(`🗑️ Repository '${repoName}' telah dihapus`);
-      setTimeout(() => renderDeleteRepoUI(), 2000);
-    } catch (err) {
-      showStatus(statusDiv, `❌ Gagal hapus: ${err.message}`, 'error');
-      addTerminalMessage(`❌ Gagal menghapus repository: ${err.message}`);
-    }
-  });
-  
-  document.getElementById('cancelActionDel')?.addEventListener('click', () => {
-    dynamicPanel.innerHTML = `<div class="empty-state"><p>Hapus dibatalkan.</p></div>`;
-  });
 }
 
 // UI: Upload Project
@@ -818,210 +834,4 @@ async function renderListRepoUI() {
   document.getElementById('backToListMenu')?.addEventListener('click', () => {
     dynamicPanel.innerHTML = `<div class="empty-state"><i class="fas fa-arrow-left"></i><p>Kembali ke menu utama.</p></div>`;
   });
-}
-
-// =============== TERMINAL EMULATOR (Seperti Termux) ===============
-
-function renderTerminalUI() {
-  dynamicPanel.innerHTML = `
-    <div class="action-title"><i class="fas fa-terminal"></i> Terminal Emulator</div>
-    <div class="terminal-container">
-      <div class="terminal-header">
-        <i class="fas fa-circle" style="color:#ff5f56"></i>
-        <i class="fas fa-circle" style="color:#ffbd2e"></i>
-        <i class="fas fa-circle" style="color:#27c93f"></i>
-        <span style="margin-left:10px; font-family: monospace;">github-manager@${escapeHtml(gitUsername || 'guest')}:~</span>
-        <span style="margin-left: auto; font-size: 11px; opacity: 0.7;">Terminal v2.0</span>
-      </div>
-      <div class="terminal-body" id="terminalBody">
-        <div class="terminal-line">╔══════════════════════════════════════════════════════════════╗</div>
-        <div class="terminal-line">║                    GitHub Manager Terminal                     ║</div>
-        <div class="terminal-line">║                                                                  ║</div>
-        <div class="terminal-line">║  Type 'help' untuk daftar perintah                               ║</div>
-        <div class="terminal-line">║  Type 'repos' untuk lihat repository                            ║</div>
-        <div class="terminal-line">║  Type 'create &lt;nama&gt;' untuk buat repository baru              ║</div>
-        <div class="terminal-line">║  Type 'delete &lt;nama&gt;' untuk hapus repository               ║</div>
-        <div class="terminal-line">║  Type 'upload &lt;repo&gt;' untuk upload file                    ║</div>
-        <div class="terminal-line">║  Type 'clear' untuk bersihkan terminal                          ║</div>
-        <div class="terminal-line">║  Type 'exit' untuk tutup terminal                                ║</div>
-        <div class="terminal-line">╚══════════════════════════════════════════════════════════════╝</div>
-        <div class="terminal-line" style="color: #f59e0b;">✨ Terminal siap digunakan!</div>
-      </div>
-      <div class="terminal-input-line">
-        <span class="terminal-prompt">${escapeHtml(gitUsername || 'guest')}@github:~$</span>
-        <input type="text" id="terminalInput" class="terminal-input" autofocus>
-      </div>
-    </div>
-    <div style="display: flex; gap: 10px; margin-top: 15px; justify-content: center;">
-      <button id="clearTerminalBtn" class="btn btn-outline"><i class="fas fa-eraser"></i> Clear</button>
-      <button id="closeTerminalBtn" class="btn btn-outline"><i class="fas fa-times"></i> Tutup Terminal</button>
-    </div>
-  `;
-  
-  const terminalInput = document.getElementById('terminalInput');
-  terminalInput?.addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter') {
-      const cmd = terminalInput.value;
-      terminalInput.value = '';
-      await processTerminalCommand(cmd);
-    }
-  });
-  
-  document.getElementById('clearTerminalBtn')?.addEventListener('click', () => {
-    const terminalBody = document.getElementById('terminalBody');
-    if (terminalBody) {
-      terminalBody.innerHTML = '<div class="terminal-line">✨ Terminal cleared</div>';
-    }
-  });
-  
-  document.getElementById('closeTerminalBtn')?.addEventListener('click', () => {
-    dynamicPanel.innerHTML = `<div class="empty-state"><i class="fas fa-terminal"></i><p>Terminal ditutup. Klik Terminal lagi untuk membuka.</p></div>`;
-  });
-  
-  terminalInput?.focus();
-  addTerminalMessage(`Selamat datang ${gitUsername || 'guest'}! Terhubung ke GitHub API`);
-}
-
-async function processTerminalCommand(cmd) {
-  addTerminalMessage(`$ ${cmd}`, false);
-  const args = cmd.trim().split(/\s+/);
-  const command = args[0].toLowerCase();
-  
-  if (!isAuthenticated && command !== 'login' && command !== 'help' && command !== 'clear' && command !== 'exit') {
-    addTerminalMessage('❌ Belum login! Silakan login melalui form di atas.', true);
-    return;
-  }
-  
-  switch (command) {
-    case 'help':
-      addTerminalMessage(`
-╔══════════════════════════════════════════════════════════════╗
-║  Perintah yang tersedia:                                     ║
-║                                                              ║
-║  help            - Tampilkan bantuan ini                    ║
-║  repos / list    - Lihat daftar repository                  ║
-║  create <nama>   - Buat repository baru                     ║
-║  delete <nama>   - Hapus repository (permanen!)             ║
-║  upload <repo>   - Upload file yang sudah dipilih           ║
-║  status          - Lihat status login                       ║
-║  whoami          - Lihat user yang aktif                    ║
-║  clear           - Bersihkan terminal                       ║
-║  exit            - Tutup terminal                           ║
-╚══════════════════════════════════════════════════════════════╝
-      `);
-      break;
-      
-    case 'login':
-      addTerminalMessage('⚠️ Silakan gunakan form login di atas untuk autentikasi dengan username dan PAT.', true);
-      break;
-      
-    case 'repos':
-    case 'list':
-      addTerminalMessage('📡 Mengambil daftar repository...');
-      try {
-        const repos = await listRepositories();
-        if (repos.length === 0) {
-          addTerminalMessage('📭 Tidak ada repository ditemukan.');
-        } else {
-          addTerminalMessage(`📁 Ditemukan ${repos.length} repository:\n`);
-          repos.forEach((r, i) => {
-            addTerminalMessage(`  ${i+1}. ${r.name} [${r.private ? '🔒 Private' : '🌍 Public'}] - ${r.description || 'Tidak ada deskripsi'}`);
-          });
-        }
-      } catch (e) {
-        addTerminalMessage(`❌ Error: ${e.message}`, true);
-      }
-      break;
-      
-    case 'create':
-      if (args[1]) {
-        addTerminalMessage(`📦 Membuat repository '${args[1]}'...`);
-        try {
-          await createRepository(args[1]);
-          addTerminalMessage(`✅ Repository '${args[1]}' berhasil dibuat!`);
-        } catch (e) {
-          addTerminalMessage(`❌ Gagal: ${e.message}`, true);
-        }
-      } else {
-        addTerminalMessage('⚠️ Usage: create <nama_repository>\nContoh: create my-new-project', true);
-      }
-      break;
-      
-    case 'delete':
-      if (args[1]) {
-        addTerminalMessage(`⚠️ Menghapus repository '${args[1]}'...`);
-        try {
-          await deleteRepository(args[1]);
-          addTerminalMessage(`🗑️ Repository '${args[1]}' telah dihapus!`);
-        } catch (e) {
-          addTerminalMessage(`❌ Gagal: ${e.message}`, true);
-        }
-      } else {
-        addTerminalMessage('⚠️ Usage: delete <nama_repository>\nContoh: delete repo-lama', true);
-      }
-      break;
-      
-    case 'upload':
-      if (args[1]) {
-        addTerminalMessage(`📤 Persiapan upload ke repository '${args[1]}'...`);
-        addTerminalMessage(`💡 Silakan buka menu "Upload Proyek" untuk memilih file dan mengupload.`);
-        // Switch to upload tab
-        document.getElementById('showUploadProyek')?.click();
-      } else {
-        addTerminalMessage('⚠️ Usage: upload <nama_repository>\nContoh: upload my-project', true);
-      }
-      break;
-      
-    case 'status':
-      addTerminalMessage(`
-╔══════════════════════════════════════╗
-║  Status Koneksi GitHub               ║
-╠══════════════════════════════════════╣
-║  Status     : ${isAuthenticated ? '✅ Terautentikasi' : '❌ Belum login'}
-║  Username   : ${gitUsername || '-'}
-║  Token      : ${gitToken ? '••••••••' : '-'}
-║  API Access : ${isAuthenticated ? '✅ Active' : '❌ Inactive'}
-╚══════════════════════════════════════╝
-      `);
-      break;
-      
-    case 'whoami':
-      addTerminalMessage(`👤 ${gitUsername || 'Not logged in'}`);
-      if (gitUsername) {
-        addTerminalMessage(`   Terhubung ke GitHub sebagai ${gitUsername}`);
-      }
-      break;
-      
-    case 'clear':
-      const terminalBody = document.getElementById('terminalBody');
-      if (terminalBody) {
-        terminalBody.innerHTML = '<div class="terminal-line">✨ Terminal cleared</div>';
-      }
-      break;
-      
-    case 'exit':
-      document.getElementById('closeTerminalBtn')?.click();
-      break;
-      
-    default:
-      if (cmd.trim() !== '') {
-        addTerminalMessage(`bash: ${command}: command not found\nKetik 'help' untuk daftar perintah yang tersedia`, true);
-      }
-  }
-  
-  const terminalBody = document.getElementById('terminalBody');
-  if (terminalBody) terminalBody.scrollTop = terminalBody.scrollHeight;
-}
-
-function addTerminalMessage(msg, isError = false) {
-  const terminalBody = document.getElementById('terminalBody');
-  if (terminalBody) {
-    const line = document.createElement('div');
-    line.className = 'terminal-line';
-    line.style.color = isError ? '#ef4444' : '#10b981';
-    line.style.whiteSpace = 'pre-wrap';
-    line.innerHTML = msg;
-    terminalBody.appendChild(line);
-    terminalBody.scrollTop = terminalBody.scrollHeight;
-  }
 }
