@@ -203,12 +203,13 @@ Pull request sangat diterima! Untuk perubahan besar, buka issue terlebih dahulu.
 3. Commit perubahan (git commit -m 'Menambah fitur keren')
 4. Push ke branch (git push origin fitur-keren)
 5. Buat Pull Request
-```
+
 
 ---
 
 ### 📁 Struktur Project
-```
+
+```bash
 github-manager/
 ├── index.html
 ├── css/
@@ -222,7 +223,7 @@ github-manager/
 
 
 ### 📄 Lisensi
-```
+```bash
 MIT License - Bebas digunakan, dimodifikasi, dan didistribusikan.
 
 ### 👨‍💻 Author
@@ -239,7 +240,7 @@ cpm_jhon - GitHub
 
 
 ## Cara Menggunakan:
-```
+
 1. **Buat folder** dengan nama `github-manager`
 2. **Buat subfolder** `css` dan `js`
 3. **Copy paste** masing-masing kode ke file yang sesuai:
