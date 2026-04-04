@@ -220,6 +220,7 @@ github-manager/
 
 ---
 
+```
 ### 📄 Lisensi
 
 MIT License - Bebas digunakan, dimodifikasi, dan didistribusikan.
@@ -233,11 +234,10 @@ cpm_jhon - GitHub
 * Icons by Font Awesome
 * ZIP library by JSZip
 * Font by Google Fonts
-
-
-
+```
 ---
 
+```
 ## Cara Menggunakan:
 
 1. **Buat folder** dengan nama `github-manager`
