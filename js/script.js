@@ -2,6 +2,7 @@
 let gitUsername = "";
 let gitToken = "";
 let isAuthenticated = false;
+let pendingFiles = []; // For upload feature
 
 // DOM elements
 let authCard, mainMenuDiv, authBtn, usernameInput, tokenInput;
@@ -296,6 +297,419 @@ function renderDeleteRepoUI() {
   });
 }
 
+// =============== UPLOAD PROYEK WITH ZIP EXTRACTION & PREVIEW ===============
+
+// Process ZIP file and extract contents
+async function processZipFile(zipFile) {
+  const JSZip = window.JSZip;
+  if (!JSZip) {
+    console.error('JSZip not loaded');
+    return [];
+  }
+  
+  try {
+    const zip = await JSZip.loadAsync(zipFile);
+    const files = [];
+    
+    for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+      if (!zipEntry.dir) {
+        const content = await zipEntry.async('blob');
+        const file = new File([content], relativePath.split('/').pop(), {
+          type: content.type,
+          lastModified: zipEntry.date?.getTime() || Date.now()
+        });
+        
+        // Preserve folder structure
+        Object.defineProperty(file, 'webkitRelativePath', {
+          value: relativePath,
+          writable: false
+        });
+        
+        files.push(file);
+      }
+    }
+    
+    return files;
+  } catch (error) {
+    console.error('Error extracting ZIP:', error);
+    return [];
+  }
+}
+
+// Traverse folder structure recursively
+async function traverseFileTree(entry, files, path = '') {
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      entry.file((file) => {
+        // Preserve folder structure in the path
+        if (path) {
+          Object.defineProperty(file, 'webkitRelativePath', {
+            value: path + '/' + file.name,
+            writable: false
+          });
+        }
+        files.push(file);
+        resolve();
+      });
+    });
+  } else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    return new Promise((resolve) => {
+      reader.readEntries(async (entries) => {
+        for (const childEntry of entries) {
+          await traverseFileTree(childEntry, files, path ? `${path}/${entry.name}` : entry.name);
+        }
+        resolve();
+      });
+    });
+  }
+}
+
+// Process selected files (handle ZIP extraction)
+async function processSelectedFiles(files) {
+  let allFiles = [];
+  
+  for (const file of files) {
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      // Extract ZIP file
+      const statusDiv = document.getElementById('uploadStatus');
+      if (statusDiv) showStatus(statusDiv, `📦 Extracting ${file.name}...`, 'info');
+      const extractedFiles = await processZipFile(file);
+      allFiles.push(...extractedFiles);
+      if (statusDiv) setTimeout(() => hideStatus(statusDiv), 2000);
+    } else {
+      allFiles.push(file);
+    }
+  }
+  
+  // Add to pending files
+  pendingFiles.push(...allFiles);
+  
+  // Remove duplicates based on path
+  const uniqueFiles = new Map();
+  for (const file of pendingFiles) {
+    const filePath = file.webkitRelativePath || file.name;
+    uniqueFiles.set(filePath, file);
+  }
+  pendingFiles = Array.from(uniqueFiles.values());
+  
+  updateFilePreview();
+}
+
+// Get file icon based on extension
+function getFileIcon(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  const icons = {
+    js: 'fa-js',
+    jsx: 'fa-react',
+    ts: 'fa-code',
+    tsx: 'fa-react',
+    html: 'fa-html5',
+    css: 'fa-css3-alt',
+    scss: 'fa-sass',
+    json: 'fa-file-code',
+    md: 'fa-markdown',
+    txt: 'fa-file-alt',
+    jpg: 'fa-image',
+    jpeg: 'fa-image',
+    png: 'fa-image',
+    gif: 'fa-image',
+    svg: 'fa-image',
+    webp: 'fa-image',
+    mp4: 'fa-video',
+    mp3: 'fa-music',
+    pdf: 'fa-file-pdf',
+    zip: 'fa-file-archive',
+    rar: 'fa-file-archive',
+    '7z': 'fa-file-archive',
+    exe: 'fa-windows',
+    py: 'fa-python',
+    java: 'fa-java',
+    cpp: 'fa-code',
+    c: 'fa-code',
+    php: 'fa-php',
+    rb: 'fa-gem',
+    go: 'fa-code',
+    rs: 'fa-cogs',
+    vue: 'fa-vuejs',
+    react: 'fa-react',
+    xml: 'fa-code',
+    yaml: 'fa-code',
+    yml: 'fa-code',
+    toml: 'fa-code',
+    sh: 'fa-terminal',
+    bash: 'fa-terminal',
+    ps1: 'fa-terminal'
+  };
+  return icons[ext] || 'fa-file';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Update file preview list
+function updateFilePreview() {
+  const previewContainer = document.getElementById('filePreviewContainer');
+  const previewList = document.getElementById('filePreviewList');
+  const fileCountSpan = document.getElementById('fileCount');
+  const startUploadBtn = document.getElementById('startUploadFiles');
+  
+  if (!previewContainer) return;
+  
+  if (pendingFiles.length === 0) {
+    previewContainer.style.display = 'none';
+    if (startUploadBtn) startUploadBtn.style.display = 'none';
+    return;
+  }
+  
+  previewContainer.style.display = 'block';
+  if (startUploadBtn) startUploadBtn.style.display = 'flex';
+  if (fileCountSpan) fileCountSpan.textContent = pendingFiles.length;
+  
+  // Group files by folder structure
+  const fileTree = {};
+  pendingFiles.forEach((file, index) => {
+    const path = file.webkitRelativePath || file.name;
+    const parts = path.split('/');
+    let current = fileTree;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i === parts.length - 1) {
+        if (!current._files) current._files = [];
+        current._files.push({ file, index, name: part });
+      } else {
+        if (!current[part]) current[part] = {};
+        current = current[part];
+      }
+    }
+  });
+  
+  // Render tree view
+  function renderTree(node, level = 0) {
+    let html = '';
+    for (const key in node) {
+      if (key === '_files') continue;
+      html += `
+        <div class="tree-folder" style="margin-left: ${level * 20}px;">
+          <div class="tree-item folder">
+            <i class="fas fa-folder"></i> ${escapeHtml(key)}
+          </div>
+          ${renderTree(node[key], level + 1)}
+        </div>
+      `;
+    }
+    if (node._files) {
+      node._files.forEach(({ file, index, name }) => {
+        const icon = getFileIcon(name);
+        html += `
+          <div class="tree-file" style="margin-left: ${level * 20}px;">
+            <div class="tree-item file" data-index="${index}">
+              <i class="fas ${icon}"></i> ${escapeHtml(name)}
+              <span class="file-size">(${formatFileSize(file.size)})</span>
+              <button class="remove-file-btn" data-index="${index}">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+    return html;
+  }
+  
+  previewList.innerHTML = renderTree(fileTree);
+  
+  // Add remove file handlers
+  document.querySelectorAll('.remove-file-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const index = parseInt(btn.dataset.index);
+      if (!isNaN(index) && index >= 0 && index < pendingFiles.length) {
+        pendingFiles.splice(index, 1);
+        updateFilePreview();
+      }
+    });
+  });
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Setup semua handler untuk file upload
+function setupFileUploadHandlers() {
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('fileInput');
+  const selectFilesBtn = document.getElementById('selectFilesBtn');
+  const clearFilesBtn = document.getElementById('clearFilesBtn');
+  
+  if (!uploadArea) return;
+  
+  // Klik area upload untuk pilih file
+  uploadArea.addEventListener('click', (e) => {
+    if (e.target.id !== 'selectFilesBtn' && fileInput) {
+      fileInput.click();
+    }
+  });
+  
+  if (selectFilesBtn) {
+    selectFilesBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (fileInput) fileInput.click();
+    });
+  }
+  
+  // Handle file selection
+  if (fileInput) {
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      await processSelectedFiles(files);
+      fileInput.value = ''; // Reset input
+    });
+  }
+  
+  // Drag & drop handlers
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+  });
+  
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('drag-over');
+  });
+  
+  uploadArea.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    
+    const items = e.dataTransfer.items;
+    const files = [];
+    
+    // Process dropped items (including folders)
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry();
+      if (entry) {
+        await traverseFileTree(entry, files);
+      }
+    }
+    
+    await processSelectedFiles(files);
+  });
+  
+  if (clearFilesBtn) {
+    clearFilesBtn.addEventListener('click', () => {
+      pendingFiles = [];
+      updateFilePreview();
+    });
+  }
+}
+
+// Start upload process with progress tracking
+async function startUploadProcess() {
+  const repo = document.getElementById('targetRepoName')?.value.trim();
+  const commitMsgInput = document.getElementById('commitMsg')?.value.trim() || "Upload proyek via web manager";
+  const statusDiv = document.getElementById('uploadStatus');
+  const progressContainer = document.getElementById('uploadProgressContainer');
+  const progressBar = document.getElementById('uploadProgressBar');
+  const progressText = document.getElementById('uploadProgressText');
+  const startUploadBtn = document.getElementById('startUploadFiles');
+  
+  if (!repo) {
+    showStatus(statusDiv, 'Masukkan nama repository tujuan!', 'error');
+    return;
+  }
+  
+  if (pendingFiles.length === 0) {
+    showStatus(statusDiv, 'Tidak ada file yang akan diupload!', 'error');
+    return;
+  }
+  
+  // Disable upload button during process
+  if (startUploadBtn) {
+    startUploadBtn.disabled = true;
+    startUploadBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Uploading...';
+  }
+  if (progressContainer) progressContainer.style.display = 'block';
+  
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+  
+  for (let i = 0; i < pendingFiles.length; i++) {
+    const file = pendingFiles[i];
+    const filePath = file.webkitRelativePath || file.name;
+    
+    // Update progress
+    const percent = ((i / pendingFiles.length) * 100).toFixed(1);
+    if (progressBar) progressBar.style.width = `${percent}%`;
+    if (progressText) progressText.innerHTML = `Uploading: ${i + 1}/${pendingFiles.length} - ${escapeHtml(filePath)}`;
+    
+    try {
+      const base64Content = await fileToBase64(file);
+      await uploadSingleFile(repo, filePath, base64Content, `${commitMsgInput} (${i + 1}/${pendingFiles.length})`);
+      successCount++;
+      
+      // Mark file as uploaded in preview
+      const fileItems = document.querySelectorAll('.tree-file');
+      if (fileItems[i]) {
+        fileItems[i].style.opacity = '0.5';
+        const fileDiv = fileItems[i].querySelector('.tree-item');
+        if (fileDiv) fileDiv.style.textDecoration = 'line-through';
+      }
+    } catch (err) {
+      errorCount++;
+      errors.push(`${filePath}: ${err.message}`);
+      console.error(`Failed to upload ${filePath}:`, err);
+      if (progressText) {
+        progressText.innerHTML += `<br/><span style="color: #ef4444;">❌ Gagal: ${escapeHtml(filePath)}</span>`;
+      }
+    }
+    
+    // Small delay to avoid rate limiting
+    await new Promise(r => setTimeout(r, 100));
+  }
+  
+  // Complete progress
+  if (progressBar) progressBar.style.width = '100%';
+  
+  // Show final result
+  if (errorCount === 0) {
+    showStatus(statusDiv, `✅ Sukses! ${successCount} file berhasil diupload ke repository ${repo}`, 'success');
+    if (progressText) progressText.innerHTML = `✅ Selesai! ${successCount} file berhasil diupload.`;
+    
+    // Clear files after successful upload
+    setTimeout(() => {
+      pendingFiles = [];
+      updateFilePreview();
+      if (progressContainer) progressContainer.style.display = 'none';
+    }, 3000);
+  } else {
+    let errorSummary = `⚠️ ${successCount} berhasil, ${errorCount} gagal.\n`;
+    if (errors.length <= 3) {
+      errorSummary += errors.join('\n');
+    } else {
+      errorSummary += `${errors.length} errors terjadi. Cek console untuk detail.`;
+    }
+    showStatus(statusDiv, errorSummary, 'error');
+    if (progressText) progressText.innerHTML = `⚠️ Selesai dengan error: ${errorCount} file gagal.`;
+  }
+  
+  // Re-enable upload button
+  if (startUploadBtn) {
+    startUploadBtn.disabled = false;
+    startUploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Semua File';
+  }
+}
+
 // UI: Upload Project
 function renderUploadProyekUI() {
   dynamicPanel.innerHTML = `
@@ -304,66 +718,58 @@ function renderUploadProyekUI() {
       <div class="input-group">
         <label>Nama Repository Tujuan</label>
         <input type="text" id="targetRepoName" placeholder="repository-yang-sudah-ada">
+        <small class="input-help">Pastikan repository sudah ada atau buat terlebih dahulu</small>
       </div>
-      <div class="input-group">
-        <label>Pilih file proyek (bisa multiple file)</label>
-        <input type="file" id="projectFiles" multiple accept="*/*">
-        <small class="input-help">File akan diupload ke root repository (branch main)</small>
+      
+      <!-- Drag & Drop Area -->
+      <div class="upload-area" id="uploadArea">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Drag & Drop file atau folder di sini</p>
+        <p style="font-size: 0.8rem; margin-top: 8px;">atau</p>
+        <button id="selectFilesBtn" class="btn btn-outline" style="margin-top: 8px;">
+          <i class="fas fa-folder-open"></i> Pilih File/Folder
+        </button>
+        <input type="file" id="fileInput" multiple webkitdirectory directory style="display: none;">
       </div>
+      
+      <!-- Preview Files -->
+      <div id="filePreviewContainer" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <label><i class="fas fa-list"></i> File yang akan diupload (<span id="fileCount">0</span>)</label>
+          <button id="clearFilesBtn" class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;">
+            <i class="fas fa-trash"></i> Hapus Semua
+          </button>
+        </div>
+        <div id="filePreviewList" class="file-preview-list"></div>
+      </div>
+      
       <div class="input-group">
         <label>Pesan Commit (opsional)</label>
         <input type="text" id="commitMsg" placeholder="Upload proyek via GitHub Manager">
       </div>
-      <button id="startUploadFiles" class="btn btn-primary"><i class="fas fa-upload"></i> Upload File Sekarang</button>
+      
+      <button id="startUploadFiles" class="btn btn-primary" style="display: none;">
+        <i class="fas fa-upload"></i> Upload Semua File
+      </button>
+      
+      <div id="uploadProgressContainer" style="display: none;">
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="uploadProgressBar" style="width: 0%"></div>
+        </div>
+        <div id="uploadProgressText" style="margin-top: 8px; font-size: 0.85rem;"></div>
+      </div>
+      
       <div id="uploadStatus" class="status-message" style="display: none;"></div>
       <button id="cancelUploadBtn" class="btn btn-outline">Kembali</button>
     </div>
   `;
   
-  document.getElementById('startUploadFiles')?.addEventListener('click', async () => {
-    const repo = document.getElementById('targetRepoName')?.value.trim();
-    const filesInput = document.getElementById('projectFiles');
-    const commitMsgInput = document.getElementById('commitMsg')?.value.trim() || "Upload proyek via web manager";
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    if (!repo) {
-      showStatus(statusDiv, 'Masukkan nama repository tujuan!', 'error');
-      return;
-    }
-    if (!filesInput.files || filesInput.files.length === 0) {
-      showStatus(statusDiv, 'Pilih minimal satu file untuk diupload.', 'error');
-      return;
-    }
-    
-    showStatus(statusDiv, `<i class="fas fa-spinner fa-pulse"></i> Mengupload ${filesInput.files.length} file...`, 'info');
-    
-    let successCount = 0;
-    let errorCount = 0;
-    
-    for (let i = 0; i < filesInput.files.length; i++) {
-      const file = filesInput.files[i];
-      try {
-        const base64Content = await fileToBase64(file);
-        const remotePath = file.name;
-        await uploadSingleFile(repo, remotePath, base64Content, commitMsgInput);
-        successCount++;
-        statusDiv.innerHTML = `<i class="fas fa-spinner fa-pulse"></i> Upload: ${successCount}/${filesInput.files.length} berhasil...`;
-      } catch (err) {
-        errorCount++;
-        console.error(err);
-        statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Gagal ${file.name}: ${err.message}`;
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
-    
-    if (errorCount === 0) {
-      showStatus(statusDiv, `✅ Semua ${successCount} file berhasil diupload ke repository ${repo}!`, 'success');
-    } else {
-      showStatus(statusDiv, `⚠️ ${successCount} berhasil, ${errorCount} gagal. Cek kembali.`, 'error');
-    }
-  });
+  // Setup file handling
+  setupFileUploadHandlers();
   
+  document.getElementById('startUploadFiles')?.addEventListener('click', () => startUploadProcess());
   document.getElementById('cancelUploadBtn')?.addEventListener('click', () => {
+    pendingFiles = [];
     dynamicPanel.innerHTML = `<div class="empty-state"><i class="fas fa-times-circle"></i><p>Upload dibatalkan.</p></div>`;
   });
 }
@@ -377,7 +783,7 @@ async function renderListRepoUI() {
         <i class="fas fa-spinner fa-pulse"></i> Memuat daftar repository...
       </div>
     </div>
-    <div style="margin-top: 1rem;">
+    <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
       <button id="refreshRepoList" class="btn btn-outline"><i class="fas fa-sync-alt"></i> Refresh</button>
       <button id="backToListMenu" class="btn btn-outline">Kembali</button>
     </div>
@@ -399,12 +805,13 @@ async function renderListRepoUI() {
           ${repos.map(repo => `
             <div class="repo-item">
               <div class="repo-info">
-                <h4><i class="fas fa-book"></i> ${repo.name}</h4>
-                <p>${repo.description || 'Tidak ada deskripsi'}</p>
+                <h4><i class="fas fa-book"></i> ${escapeHtml(repo.name)}</h4>
+                <p>${escapeHtml(repo.description || 'Tidak ada deskripsi')}</p>
                 <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                  <span class="repo-badge"><i class="fas fa-code-branch"></i> ${repo.default_branch}</span>
+                  <span class="repo-badge"><i class="fas fa-code-branch"></i> ${escapeHtml(repo.default_branch)}</span>
                   <span class="repo-badge"><i class="fas ${repo.private ? 'fa-lock' : 'fa-globe'}"></i> ${repo.private ? 'Private' : 'Public'}</span>
                   <span class="repo-badge"><i class="fas fa-star"></i> ${repo.stargazers_count}</span>
+                  <span class="repo-badge"><i class="fas fa-code-fork"></i> ${repo.forks_count}</span>
                 </div>
               </div>
               <div>
@@ -417,7 +824,7 @@ async function renderListRepoUI() {
         </div>
       `;
     } catch (err) {
-      container.innerHTML = `<div class="status-message status-error"><i class="fas fa-exclamation-triangle"></i> Gagal memuat: ${err.message}</div>`;
+      container.innerHTML = `<div class="status-message status-error"><i class="fas fa-exclamation-triangle"></i> Gagal memuat: ${escapeHtml(err.message)}</div>`;
     }
   }
   
