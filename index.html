@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>RepoFlow | GitHub Manager Premium - 2 Mode Upload</title>
-  <meta name="description" content="Upload multi file atau archive ZIP dengan auto extract ke GitHub">
+  <title>RepoFlow | GitHub Manager Premium</title>
+  <meta name="description" content="Upload, push, dan kelola repository GitHub dengan terminal live modern">
   <meta name="theme-color" content="#0a0a0f">
+  <meta name="author" content="cpm_jhon">
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Font Awesome -->
@@ -20,7 +21,9 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
       <div class="logo">
-        <i class="fab fa-github"></i>
+        <div class="logo-icon">
+          <i class="fab fa-github"></i>
+        </div>
         <span>Repo<span class="highlight">Flow</span></span>
       </div>
       <nav class="nav-menu">
@@ -115,28 +118,155 @@
             <div class="hero">
               <h1>Welcome to <span class="gradient-text">RepoFlow</span></h1>
               <p>Upload, push, dan kelola repository GitHub Anda dengan terminal live yang powerful</p>
-              <div class="stats-grid" id="statsGrid">
-                <div class="stat-card">
-                  <i class="fas fa-database"></i>
-                  <div class="stat-info">
-                    <span class="stat-value" id="statRepos">0</span>
-                    <span class="stat-label">Repositories</span>
+            </div>
+          </div>
+
+          <!-- Developer Profile -->
+          <div class="developer-section">
+            <div class="developer-card">
+              <div class="developer-avatar">
+                <img src="https://ui-avatars.com/api/?name=CPM+JHON&background=00d4ff&color=fff&size=80&rounded=true&bold=true" alt="Developer Avatar">
+              </div>
+              <div class="developer-info">
+                <h3><i class="fas fa-code"></i> Created by <span class="highlight">cpm_jhon</span></h3>
+                <p>Full-stack developer & cybersecurity enthusiast</p>
+                <div class="developer-social">
+                  <a href="#" class="social-link"><i class="fab fa-github"></i> GitHub</a>
+                  <a href="#" class="social-link"><i class="fab fa-twitter"></i> Twitter</a>
+                  <a href="#" class="social-link"><i class="fab fa-linkedin"></i> LinkedIn</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Documentation Section -->
+          <div class="docs-section">
+            <h2><i class="fas fa-book-open"></i> Documentation & Guide</h2>
+            
+            <div class="docs-grid">
+              <div class="doc-card">
+                <div class="doc-icon"><i class="fas fa-rocket"></i></div>
+                <h3>Getting Started</h3>
+                <p>Langkah pertama menggunakan RepoFlow untuk mengelola repository GitHub Anda.</p>
+                <ul>
+                  <li><i class="fas fa-check-circle"></i> Buat Personal Access Token di GitHub</li>
+                  <li><i class="fas fa-check-circle"></i> Login dengan username dan token</li>
+                  <li><i class="fas fa-check-circle"></i> Mulai kelola repository</li>
+                </ul>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-icon"><i class="fas fa-plus-circle"></i></div>
+                <h3>Create Repository</h3>
+                <p>Membuat repository baru di GitHub dengan mudah.</p>
+                <ul>
+                  <li><i class="fas fa-check-circle"></i> Klik menu "Create Repo"</li>
+                  <li><i class="fas fa-check-circle"></i> Isi nama repository</li>
+                  <li><i class="fas fa-check-circle"></i> Tambahkan deskripsi (opsional)</li>
+                  <li><i class="fas fa-check-circle"></i> Pilih Public/Private</li>
+                </ul>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-icon"><i class="fas fa-trash-alt"></i></div>
+                <h3>Delete Repository</h3>
+                <p>Menghapus repository dengan konfirmasi keamanan.</p>
+                <ul>
+                  <li><i class="fas fa-check-circle"></i> Klik menu "Delete Repo"</li>
+                  <li><i class="fas fa-check-circle"></i> Masukkan nama repository</li>
+                  <li><i class="fas fa-check-circle"></i> Konfirmasi nama</li>
+                  <li><i class="fas fa-check-circle"></i> Klik tombol delete</li>
+                </ul>
+                <div class="warning-note">⚠️ Tindakan ini permanen!</div>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3>Upload Mode 1: Multiple Files</h3>
+                <p>Upload banyak file sekaligus ke repository.</p>
+                <ul>
+                  <li><i class="fas fa-check-circle"></i> Pilih tab "Mode 1: Multiple Files"</li>
+                  <li><i class="fas fa-check-circle"></i> Pilih target repository</li>
+                  <li><i class="fas fa-check-circle"></i> Pilih file (bisa multiple)</li>
+                  <li><i class="fas fa-check-circle"></i> Klik "Upload Files"</li>
+                </ul>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-icon"><i class="fas fa-file-archive"></i></div>
+                <h3>Upload Mode 2: ZIP Archive</h3>
+                <p>Upload file ZIP, auto extract, dan upload semua file.</p>
+                <ul>
+                  <li><i class="fas fa-check-circle"></i> Pilih tab "Mode 2: Archive (ZIP)"</li>
+                  <li><i class="fas fa-check-circle"></i> Upload file ZIP</li>
+                  <li><i class="fas fa-check-circle"></i> Tunggu auto extract</li>
+                  <li><i class="fas fa-check-circle"></i> Klik "Extract & Upload"</li>
+                </ul>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-icon"><i class="fas fa-terminal"></i></div>
+                <h3>Live Terminal</h3>
+                <p>Terminal real-time untuk melihat proses operasi.</p>
+                <ul>
+                  <li><i class="fas fa-check-circle"></i> Muncul otomatis saat operasi</li>
+                  <li><i class="fas fa-check-circle"></i> Warna log: <span class="log-success">Sukses</span>, <span class="log-error">Error</span>, <span class="log-warning">Warning</span></li>
+                  <li><i class="fas fa-check-circle"></i> Progress bar animasi</li>
+                  <li><i class="fas fa-check-circle"></i> Bisa ditutup manual</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="faq-section">
+              <h3><i class="fas fa-question-circle"></i> Frequently Asked Questions</h3>
+              <div class="faq-list">
+                <div class="faq-item">
+                  <div class="faq-question">
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Bagaimana cara mendapatkan Personal Access Token (PAT)?</span>
+                  </div>
+                  <div class="faq-answer">
+                    Buka GitHub Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token. Centang permission: repo, delete_repo. Copy token yang dihasilkan.
                   </div>
                 </div>
-                <div class="stat-card">
-                  <i class="fas fa-cloud-upload-alt"></i>
-                  <div class="stat-info">
-                    <span class="stat-value" id="statUploads">0</span>
-                    <span class="stat-label">Uploads</span>
+                <div class="faq-item">
+                  <div class="faq-question">
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Apakah token saya aman?</span>
+                  </div>
+                  <div class="faq-answer">
+                    Ya, token hanya disimpan di memori browser dan tidak pernah dikirim ke server manapun selain API GitHub.
                   </div>
                 </div>
-                <div class="stat-card">
-                  <i class="fas fa-code-branch"></i>
-                  <div class="stat-info">
-                    <span class="stat-value" id="statCommits">0</span>
-                    <span class="stat-label">Commits</span>
+                <div class="faq-item">
+                  <div class="faq-question">
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Berapa batas upload file?</span>
+                  </div>
+                  <div class="faq-answer">
+                    GitHub membatasi file individual maksimal 100MB. Untuk file besar, disarankan menggunakan Git LFS.
                   </div>
                 </div>
+                <div class="faq-item">
+                  <div class="faq-question">
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Apakah bisa upload folder dengan struktur?</span>
+                  </div>
+                  <div class="faq-answer">
+                    Untuk struktur folder, gunakan Mode 2 (ZIP Archive). ZIP file akan diekstrak dan mempertahankan struktur folder.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Version Info -->
+            <div class="version-info">
+              <div class="version-badge">
+                <i class="fas fa-tag"></i> Version 2.0.0
+              </div>
+              <div class="last-updated">
+                <i class="fas fa-calendar-alt"></i> Last updated: December 2024
               </div>
             </div>
           </div>
@@ -229,7 +359,6 @@
             <p>Pilih mode upload yang sesuai dengan kebutuhan Anda</p>
           </div>
           
-          <!-- Mode Selection Tabs -->
           <div class="mode-tabs">
             <button class="mode-tab active" data-mode="mode1">
               <i class="fas fa-file"></i> Mode 1: Multiple Files
@@ -239,7 +368,7 @@
             </button>
           </div>
 
-          <!-- Mode 1: Multiple Files Upload -->
+          <!-- Mode 1: Multiple Files -->
           <div id="mode1Container" class="mode-container">
             <div class="form-card">
               <div class="mode-badge">
@@ -267,7 +396,7 @@
             </div>
           </div>
 
-          <!-- Mode 2: Archive Upload (ZIP) -->
+          <!-- Mode 2: ZIP Archive -->
           <div id="mode2Container" class="mode-container" style="display: none;">
             <div class="form-card">
               <div class="mode-badge archive-badge">
@@ -308,8 +437,8 @@
           <div class="section-header">
             <h2><i class="fas fa-list"></i> Repositories</h2>
             <p>Daftar semua repository GitHub Anda</p>
-            <button id="refreshReposBtn" class="btn-outline-small">
-              <i class="fas fa-sync-alt"></i> Refresh
+            <button id="refreshReposBtn" class="btn-primary-small">
+              <i class="fas fa-sync-alt"></i> Refresh Repositories
             </button>
           </div>
           <div id="repoListContainer" class="repo-grid"></div>
