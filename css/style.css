@@ -1,6 +1,6 @@
 /* ========================================
    REPOFLOW - MODERN GITHUB MANAGER
-   Premium Design with Live Terminal
+   Premium Design with 2 Mode Upload
    ======================================== */
 
 /* CSS Variables */
@@ -311,6 +311,68 @@ body {
   font-size: 0.8rem;
 }
 
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
+}
+
+.mode-tab {
+  background: transparent;
+  border: none;
+  padding: 12px 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  transition: var(--transition);
+}
+
+.mode-tab i {
+  font-size: 1.1rem;
+}
+
+.mode-tab:hover {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.mode-tab.active {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  border-bottom: 2px solid var(--accent-cyan);
+}
+
+.mode-container {
+  animation: fadeIn 0.3s ease;
+}
+
+.mode-badge {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+}
+
+.archive-badge {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
 /* Welcome Section */
 .welcome-section {
   margin-bottom: 32px;
@@ -451,7 +513,7 @@ body {
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
   padding: 24px;
-  max-width: 600px;
+  max-width: 700px;
 }
 
 .danger-card {
@@ -600,6 +662,19 @@ textarea.modern-input {
   margin-bottom: 12px;
 }
 
+.archive-upload {
+  border-color: var(--accent-purple);
+}
+
+.archive-upload i {
+  color: var(--accent-purple);
+}
+
+.archive-upload:hover {
+  border-color: var(--accent-purple);
+  background: rgba(124, 58, 237, 0.05);
+}
+
 .file-list {
   background: var(--bg-terminal);
   border-radius: 8px;
@@ -610,6 +685,44 @@ textarea.modern-input {
   font-size: 0.7rem;
   font-family: 'JetBrains Mono', monospace;
   display: none;
+}
+
+/* Archive Preview */
+.archive-preview {
+  background: var(--bg-terminal);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.archive-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.archive-info i {
+  font-size: 1.5rem;
+  color: var(--accent-purple);
+}
+
+.file-count-badge {
+  background: var(--accent-purple);
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  color: white;
+}
+
+.extracted-preview {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 0.7rem;
+  font-family: monospace;
 }
 
 /* Repository Grid */
@@ -888,6 +1001,14 @@ textarea.modern-input {
   
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .mode-tabs {
+    flex-direction: column;
+  }
+  
+  .mode-tab {
+    justify-content: center;
   }
 }
 
