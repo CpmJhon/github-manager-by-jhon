@@ -306,6 +306,11 @@ body {
   font-size: 0.85rem;
 }
 
+.warning-text {
+  color: var(--accent-yellow);
+  font-size: 0.8rem;
+}
+
 /* Welcome Section */
 .welcome-section {
   margin-bottom: 32px;
@@ -449,6 +454,11 @@ body {
   max-width: 600px;
 }
 
+.danger-card {
+  border-color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.05);
+}
+
 .input-group {
   margin-bottom: 20px;
 }
@@ -515,6 +525,27 @@ textarea.modern-input {
 .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--accent-red), #991b1b);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  transition: var(--transition);
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .btn-outline {
@@ -638,6 +669,19 @@ textarea.modern-input {
 
 .repo-link:hover {
   text-decoration: underline;
+}
+
+.delete-repo-btn {
+  margin-top: 12px;
+  width: 100%;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.delete-repo-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--accent-red);
 }
 
 /* Terminal Container */
