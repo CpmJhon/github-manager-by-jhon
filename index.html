@@ -7,10 +7,10 @@
   <meta name="description" content="Upload, push, dan kelola repository GitHub dengan terminal live modern">
   <meta name="theme-color" content="#0a0a0f">
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- JSZip Library untuk extract ZIP -->
+  <!-- JSZip Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
@@ -35,6 +35,10 @@
         <a href="#" class="nav-item" data-page="create">
           <i class="fas fa-plus-circle"></i>
           <span>Create Repo</span>
+        </a>
+        <a href="#" class="nav-item" data-page="delete">
+          <i class="fas fa-trash-alt"></i>
+          <span>Delete Repo</span>
         </a>
         <a href="#" class="nav-item" data-page="upload">
           <i class="fas fa-cloud-upload-alt"></i>
@@ -160,6 +164,9 @@
                 <button class="quick-btn" data-page="upload">
                   <i class="fas fa-upload"></i> Upload Project
                 </button>
+                <button class="quick-btn" data-page="delete">
+                  <i class="fas fa-trash-alt"></i> Delete Repository
+                </button>
                 <button class="quick-btn" data-page="repos">
                   <i class="fas fa-list"></i> View Repositories
                 </button>
@@ -190,6 +197,27 @@
             </div>
             <button id="confirmCreateRepo" class="btn-primary">
               <i class="fas fa-code-branch"></i> Create Repository
+            </button>
+          </div>
+        </div>
+
+        <!-- Delete Repo Page -->
+        <div class="page" id="deletePage" style="display: none;">
+          <div class="section-header">
+            <h2><i class="fas fa-trash-alt"></i> Delete Repository</h2>
+            <p class="warning-text">⚠️ Peringatan: Tindakan ini permanen dan tidak dapat dibatalkan!</p>
+          </div>
+          <div class="form-card danger-card">
+            <div class="input-group">
+              <label>Repository Name to Delete</label>
+              <input type="text" id="deleteRepoName" placeholder="repository-name" class="modern-input">
+            </div>
+            <div class="input-group">
+              <label>Confirm Repository Name</label>
+              <input type="text" id="confirmDeleteName" placeholder="type repository name to confirm" class="modern-input">
+            </div>
+            <button id="confirmDeleteRepoBtn" class="btn-danger">
+              <i class="fas fa-radiation"></i> Permanently Delete Repository
             </button>
           </div>
         </div>
