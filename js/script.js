@@ -5,6 +5,8 @@
 // Mempertahankan semua fungsionalitas original
 // FIXED: View Repositories & Refresh Button
 // FIXED: Delete Repository & Immediate Refresh
+// ADDED: Typing effect for terminal cursor
+// ADDED: RepoFlow By JHON PRODUCTION text
 // ========================================
 
 // =============== STATE MANAGEMENT ===============
@@ -17,6 +19,8 @@ let activityLog = [];
 let uploadCount = 0;
 let commitCount = 0;
 let isLoadingRepos = false;
+let isTypingActive = false;
+let typingTimeout = null;
 
 // =============== DOM ELEMENTS ===============
 let sidebar, menuToggle, pagesContainer, terminalContainer;
@@ -114,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // =============== FIXED: Refresh repos button ===============
   const refreshBtn = document.getElementById('refreshReposBtn');
   if (refreshBtn) {
-    // Remove any existing listeners by cloning and replacing
     const newRefreshBtn = refreshBtn.cloneNode(true);
     refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
     
@@ -152,9 +155,178 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeTerminalBtn) {
     closeTerminalBtn.addEventListener('click', () => {
       if (terminalContainer) terminalContainer.style.display = 'none';
+      if (typingTimeout) clearTimeout(typingTimeout);
+      isTypingActive = false;
     });
   }
+  
+  // Start typing effect for terminal welcome
+  setTimeout(() => {
+    if (terminalBody && terminalBody.children.length === 0) {
+      startTerminalWelcomeTyping();
+    }
+  }, 500);
 });
+
+// =============== TYPING EFFECT FOR TERMINAL ===============
+function startTerminalWelcomeTyping() {
+  if (!terminalBody) return;
+  if (isTypingActive) return;
+  
+  isTypingActive = true;
+  
+  const welcomeTexts = [
+    "> ╔══════════════════════════════════════════════════════════════╗",
+    "> ║                                                              ║",
+    "> ║     ██████╗ ███████╗██████╗  ██████╗ ███████╗██╗      ██████╗██╗    ║",
+    "> ║     ██╔══██╗██╔════╝██╔══██╗██╔═══██╗██╔════╝██║     ██╔════╝██║    ║",
+    "> ║     ██████╔╝█████╗  ██████╔╝██║   ██║█████╗  ██║     ██║     ██║    ║",
+    "> ║     ██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║██╔══╝  ██║     ██║     ██║    ║",
+    "> ║     ██║  ██║███████╗██║     ╚██████╔╝██║     ██║     ╚██████╗██║    ║",
+    "> ║     ╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ╚═╝     ╚═╝      ╚═════╝╚═╝    ║",
+    "> ║                                                              ║",
+    "> ║           ██████╗ ██████╗  ██████╗ ██████╗ ██╗   ██╗ ██████╗████████╗██╗ ██████╗ ███╗   ██╗    ║",
+    "> ║          ██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██║   ██║██╔════╝╚══██╔══╝██║██╔═══██╗████╗  ██║    ║",
+    "> ║          ██████╔╝██████╔╝██║   ██║██║  ██║██║   ██║██║        ██║   ██║██║   ██║██╔██╗ ██║    ║",
+    "> ║          ██╔═══╝ ██╔══██╗██║   ██║██║  ██║██║   ██║██║        ██║   ██║██║   ██║██║╚██╗██║    ║",
+    "> ║          ██║     ██║  ██║╚██████╔╝██████╔╝╚██████╔╝╚██████╗   ██║   ██║╚██████╔╝██║ ╚████║    ║",
+    "> ║          ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝  ╚═════╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝    ║",
+    "> ║                                                              ║",
+    "> ╚══════════════════════════════════════════════════════════════╝",
+    "> ",
+    "> [SYSTEM] RepoFlow Terminal v2.0",
+    "> [SYSTEM] Live terminal ready",
+    "> [SYSTEM] 2 Mode Upload Available",
+    "> [SYSTEM] Mode 1: Multiple Files | Mode 2: ZIP Archive",
+    "> [SYSTEM] Created by: JHON PRODUCTION",
+    "> [SYSTEM] Waiting for operations..."
+  ];
+  
+  terminalBody.innerHTML = '';
+  let lineIndex = 0;
+  let charIndex = 0;
+  let currentLine = "";
+  
+  function typeNextCharacter() {
+    if (!isTypingActive) return;
+    
+    if (lineIndex >= welcomeTexts.length) {
+      addCursorLine();
+      isTypingActive = false;
+      return;
+    }
+    
+    if (charIndex === 0) {
+      currentLine = welcomeTexts[lineIndex];
+      const newLine = document.createElement('div');
+      newLine.className = 'log-line log-info';
+      newLine.id = `line-${lineIndex}`;
+      terminalBody.appendChild(newLine);
+    }
+    
+    if (charIndex < currentLine.length) {
+      const lineElement = document.getElementById(`line-${lineIndex}`);
+      if (lineElement) {
+        lineElement.innerHTML = currentLine.substring(0, charIndex + 1);
+      }
+      charIndex++;
+      typingTimeout = setTimeout(typeNextCharacter, 15 + Math.random() * 10);
+    } else {
+      lineIndex++;
+      charIndex = 0;
+      typingTimeout = setTimeout(typeNextCharacter, 50);
+    }
+    scrollTerminalToBottom();
+  }
+  
+  typeNextCharacter();
+}
+
+function addCursorLine() {
+  if (!terminalBody) return;
+  
+  const cursorLine = document.createElement('div');
+  cursorLine.className = 'cursor-line';
+  cursorLine.innerHTML = '<span class="prompt">$</span> <span class="typing-text" id="typingText"></span><span class="blinking-cursor">_</span>';
+  terminalBody.appendChild(cursorLine);
+  
+  startCommandTyping();
+}
+
+function startCommandTyping() {
+  const commands = [
+    "repoflow --status",
+    "✓ System Online",
+    "✓ GitHub API Connected",
+    "✓ 2 Upload Modes Active",
+    "repoflow --info",
+    "© 2024 RepoFlow by JHON PRODUCTION",
+    "All rights reserved"
+  ];
+  
+  let cmdIndex = 0;
+  let charIndex = 0;
+  let currentCommand = "";
+  const typingTextSpan = document.getElementById('typingText');
+  
+  function typeCommand() {
+    if (!isTypingActive) return;
+    
+    if (cmdIndex >= commands.length) {
+      if (typingTextSpan) {
+        typingTextSpan.innerHTML = 'ready for operations...';
+      }
+      addWatermark();
+      return;
+    }
+    
+    if (charIndex === 0) {
+      currentCommand = commands[cmdIndex];
+    }
+    
+    if (charIndex < currentCommand.length) {
+      if (typingTextSpan) {
+        typingTextSpan.innerHTML += currentCommand[charIndex];
+      }
+      charIndex++;
+      typingTimeout = setTimeout(typeCommand, 50 + Math.random() * 20);
+    } else {
+      cmdIndex++;
+      charIndex = 0;
+      if (typingTextSpan) {
+        typingTimeout = setTimeout(() => {
+          if (cmdIndex < commands.length) {
+            typingTextSpan.innerHTML = '';
+            typeCommand();
+          } else {
+            typingTextSpan.innerHTML = '';
+            typeCommand();
+          }
+        }, 400);
+      }
+    }
+    scrollTerminalToBottom();
+  }
+  
+  typeCommand();
+}
+
+function addWatermark() {
+  if (terminalContainer && !terminalContainer.querySelector('.terminal-watermark')) {
+    const watermark = document.createElement('div');
+    watermark.className = 'terminal-watermark';
+    watermark.innerHTML = '⚡ RepoFlow by JHON PRODUCTION ⚡';
+    terminalContainer.appendChild(watermark);
+  }
+}
+
+function stopTypingEffect() {
+  isTypingActive = false;
+  if (typingTimeout) {
+    clearTimeout(typingTimeout);
+    typingTimeout = null;
+  }
+}
 
 // =============== NAVIGATION ===============
 function navigateTo(page) {
@@ -178,7 +350,6 @@ function navigateTo(page) {
     if (pageElement) pageElement.style.display = 'block';
   }
   
-  // Load repositories when navigating to repos page
   if (page === 'repos' && isAuthenticated) {
     loadRepositories();
   }
@@ -187,12 +358,18 @@ function navigateTo(page) {
 
 // =============== TERMINAL FUNCTIONS ===============
 function showTerminal() {
-  if (terminalContainer) terminalContainer.style.display = 'block';
+  if (terminalContainer) {
+    terminalContainer.style.display = 'block';
+    addWatermark();
+  }
   scrollTerminalToBottom();
 }
 
 function addTerminalLog(message, type = 'info') {
   if (!terminalBody) return;
+  
+  stopTypingEffect();
+  
   const logDiv = document.createElement('div');
   logDiv.className = `log-line log-${type}`;
   logDiv.innerHTML = message;
@@ -204,7 +381,10 @@ function addTerminalLog(message, type = 'info') {
   updateDashboard();
   
   const cursorLine = terminalBody.querySelector('.cursor-line');
-  if (cursorLine) { cursorLine.remove(); terminalBody.appendChild(cursorLine); }
+  if (cursorLine) {
+    cursorLine.remove();
+    terminalBody.appendChild(cursorLine);
+  }
 }
 
 function addSystemLog(message, type = 'info') {
@@ -309,7 +489,6 @@ async function authenticateAndVerify() {
       if (span) span.textContent = 'Connected';
     }
     
-    // Load repositories after successful login
     await loadRepositories();
     navigateTo('home');
     addSystemLog('[READY] System online. Select an operation.', 'success');
@@ -360,6 +539,8 @@ function logout() {
   const tokenInput = document.getElementById('githubToken');
   if (usernameInput) usernameInput.value = '';
   if (tokenInput) tokenInput.value = '';
+  
+  stopTypingEffect();
 }
 
 // =============== CREATE REPOSITORY ===============
@@ -422,7 +603,6 @@ async function executeDeleteFromPage() {
   if (confirmDeleteName) confirmDeleteName.value = '';
 }
 
-// =============== FIXED: DELETE REPOSITORY WITH IMMEDIATE REFRESH ===============
 async function executeDeleteRepo(repoName) {
   showTerminal();
   addSystemLog('[DANGER] Initiating repository deletion sequence...', 'warning');
@@ -432,22 +612,16 @@ async function executeDeleteRepo(repoName) {
   updateProgress(50, 'Deleting repository...');
   
   try {
-    // Attempt to delete from GitHub
     await githubRequest(`/repos/${gitUsername}/${repoName}`, 'DELETE');
     addSystemLog(`[SUCCESS] Repository "${repoName}" has been permanently deleted!`, 'success');
     updateProgress(100, 'Complete!');
     
     hideProgress();
-    
-    // Add small delay for GitHub API to process deletion (500ms is usually enough)
     addSystemLog('[SYSTEM] Waiting for GitHub to process deletion...', 'info');
     await new Promise(r => setTimeout(r, 500));
-    
-    // Force refresh repositories immediately with cache bypass
     addSystemLog('[SYSTEM] Refreshing repository list...', 'info');
     await loadRepositories(true);
     
-    // Also refresh the delete page input if it exists
     const deleteRepoNameInput = document.getElementById('deleteRepoName');
     if (deleteRepoNameInput) deleteRepoNameInput.value = '';
     const confirmDeleteNameInput = document.getElementById('confirmDeleteName');
@@ -459,7 +633,6 @@ async function executeDeleteRepo(repoName) {
     addSystemLog(`[ERROR] Deletion failed: ${err.message}`, 'error');
     hideProgress();
     
-    // Check if repo might already be deleted but we got a 404
     if (err.message.includes('404') || err.message.includes('Not Found')) {
       addSystemLog('[INFO] Repository may already be deleted. Refreshing list...', 'warning');
       await loadRepositories(true);
@@ -467,7 +640,7 @@ async function executeDeleteRepo(repoName) {
   }
 }
 
-// =============== LOAD REPOSITORIES (FIXED - NO CACHE) ===============
+// =============== LOAD REPOSITORIES ===============
 async function loadRepositories(forceRefresh = false) {
   if (!isAuthenticated) {
     console.log('Not authenticated, cannot load repositories');
@@ -487,7 +660,6 @@ async function loadRepositories(forceRefresh = false) {
   
   isLoadingRepos = true;
   
-  // Show loading state
   container.innerHTML = `
     <div style="text-align:center; padding:60px 40px;">
       <div style="display: inline-block; width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--accent-cyan); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
@@ -495,7 +667,6 @@ async function loadRepositories(forceRefresh = false) {
     </div>
   `;
   
-  // Add spin animation if not exists
   if (!document.querySelector('#spin-style')) {
     const style = document.createElement('style');
     style.id = 'spin-style';
@@ -506,12 +677,11 @@ async function loadRepositories(forceRefresh = false) {
   addSystemLog('[SYSTEM] Fetching repositories from GitHub...', 'info');
   
   try {
-    // Always fetch fresh data from GitHub
     let allRepos = [];
     let page = 1;
     let hasMore = true;
     
-    while (hasMore && page <= 3) { // Max 3 pages (150 repos)
+    while (hasMore && page <= 3) {
       const repos = await githubRequest(`/user/repos?per_page=50&page=${page}&sort=updated&direction=desc`, 'GET');
       if (repos && repos.length > 0) {
         allRepos = allRepos.concat(repos);
@@ -538,12 +708,9 @@ async function loadRepositories(forceRefresh = false) {
     
     addSystemLog(`[SYSTEM] Loaded ${allRepos.length} repositories`, 'success');
     
-    // Store repo names to check for duplicates
     const repoNames = new Set();
     
-    // Render repositories
     container.innerHTML = allRepos.map(repo => {
-      // Skip duplicates just in case
       if (repoNames.has(repo.name)) return '';
       repoNames.add(repo.name);
       
@@ -572,20 +739,16 @@ async function loadRepositories(forceRefresh = false) {
       </div>
     `}).filter(html => html !== '').join('');
     
-    // Attach delete event listeners properly
     const deleteButtons = container.querySelectorAll('.delete-repo-btn');
     deleteButtons.forEach(btn => {
-      // Remove old listener by cloning (clears any previous listeners)
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
       
-      // Attach fresh event listener
       newBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
         const repoName = newBtn.getAttribute('data-repo');
         if (repoName && confirm(`⚠️ PERINGATAN!\n\nHapus repository "${repoName}" secara permanen?\n\nTindakan ini TIDAK DAPAT DIBATALKAN!`)) {
-          // Disable button to prevent double click
           newBtn.disabled = true;
           newBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Deleting...';
           await executeDeleteRepo(repoName);
@@ -611,7 +774,6 @@ async function loadRepositories(forceRefresh = false) {
   }
 }
 
-// Make loadRepositories available globally for inline onclick
 window.loadRepositories = loadRepositories;
 window.navigateTo = navigateTo;
 
@@ -633,7 +795,6 @@ function fileToBase64(file) {
 }
 
 async function uploadSingleFile(repo, filePath, content, msg) {
-  // Encode file path for URL
   const encodedPath = filePath.split('/').map(segment => encodeURIComponent(segment)).join('/');
   return await githubRequest(`/repos/${gitUsername}/${repo}/contents/${encodedPath}`, 'PUT', {
     message: msg, content: content, branch: "main"
@@ -909,7 +1070,6 @@ async function startMode2Upload() {
   }, 2000);
 }
 
-// Export functions to global scope for inline event handlers
 window.executeDeleteRepo = executeDeleteRepo;
 window.loadRepositories = loadRepositories;
 window.navigateTo = navigateTo;
