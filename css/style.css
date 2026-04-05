@@ -785,8 +785,6 @@ textarea.modern-input {
 }
 
 .delete-repo-btn {
-  margin-top: 12px;
-  width: 100%;
   background: rgba(239, 68, 68, 0.1);
   border-color: var(--accent-red);
   color: var(--accent-red);
