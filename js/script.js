@@ -1,16 +1,16 @@
 // ========================================
-// REPOFLOW - GITHUB MANAGER WITH LIVE TERMINAL
+// REPOFLOW - GITHUB MANAGER WITH 2 MODE UPLOAD
 // Mempertahankan semua fungsionalitas original
-// Fitur Delete Repository: 
-// 1. Halaman Delete Repo khusus
-// 2. Tombol Delete di setiap card repository
+// Mode 1: Multi File/Folder Upload
+// Mode 2: Archive Upload (ZIP) + Auto Extract
 // ========================================
 
 // =============== STATE MANAGEMENT ===============
 let gitUsername = "";
 let gitToken = "";
 let isAuthenticated = false;
-let pendingFiles = [];
+let pendingFiles = []; // Untuk Mode 1
+let extractedFiles = []; // Untuk Mode 2
 let activityLog = [];
 let uploadCount = 0;
 let commitCount = 0;
@@ -39,19 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const page = item.dataset.page;
       navigateTo(page);
-      
-      // Close sidebar on mobile
-      if (window.innerWidth <= 768) {
-        sidebar.classList.remove('open');
-      }
+      if (window.innerWidth <= 768) sidebar.classList.remove('open');
     });
   });
   
   // Menu Toggle
   if (menuToggle) {
-    menuToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('open');
-    });
+    menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
   }
   
   // Quick action buttons
@@ -59,6 +53,17 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       const page = btn.dataset.page;
       if (page) navigateTo(page);
+    });
+  });
+  
+  // Mode Tabs untuk Upload
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.mode;
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('mode1Container').style.display = mode === 'mode1' ? 'block' : 'none';
+      document.getElementById('mode2Container').style.display = mode === 'mode2' ? 'block' : 'none';
     });
   });
   
@@ -76,11 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Create repo button
   document.getElementById('confirmCreateRepo')?.addEventListener('click', executeCreateRepo);
   
-  // Delete repo button (halaman khusus)
+  // Delete repo button
   document.getElementById('confirmDeleteRepoBtn')?.addEventListener('click', executeDeleteFromPage);
   
-  // Upload handlers
-  setupUploadHandlers();
+  // Setup Mode 1 Upload Handlers
+  setupMode1UploadHandlers();
+  
+  // Setup Mode 2 Upload Handlers
+  setupMode2UploadHandlers();
   
   // Refresh repos button
   document.getElementById('refreshReposBtn')?.addEventListener('click', loadRepositories);
@@ -95,42 +103,23 @@ document.addEventListener('DOMContentLoaded', () => {
 function navigateTo(page) {
   currentPage = page;
   
-  // Update active nav
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active');
-    if (item.dataset.page === page) {
-      item.classList.add('active');
-    }
+    if (item.dataset.page === page) item.classList.add('active');
   });
   
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(p => {
-    p.style.display = 'none';
-  });
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
   
-  // Show selected page
   const pageMap = {
-    home: 'homePage',
-    dashboard: 'dashboardPage',
-    create: 'createPage',
-    delete: 'deletePage',
-    upload: 'uploadPage',
-    repos: 'reposPage'
+    home: 'homePage', dashboard: 'dashboardPage', create: 'createPage',
+    delete: 'deletePage', upload: 'uploadPage', repos: 'reposPage'
   };
   
   const pageId = pageMap[page];
-  if (pageId) {
-    document.getElementById(pageId).style.display = 'block';
-  }
+  if (pageId) document.getElementById(pageId).style.display = 'block';
   
-  // Load data for certain pages
-  if (page === 'repos' && isAuthenticated) {
-    loadRepositories();
-  }
-  
-  if (page === 'dashboard' && isAuthenticated) {
-    updateDashboard();
-  }
+  if (page === 'repos' && isAuthenticated) loadRepositories();
+  if (page === 'dashboard' && isAuthenticated) updateDashboard();
 }
 
 // =============== TERMINAL FUNCTIONS ===============
@@ -146,17 +135,12 @@ function addTerminalLog(message, type = 'info') {
   terminalBody.appendChild(logDiv);
   scrollTerminalToBottom();
   
-  // Add to activity log
   activityLog.unshift({ message, type, time: new Date() });
   if (activityLog.length > 20) activityLog.pop();
   updateDashboard();
   
-  // Keep cursor at bottom
   const cursorLine = terminalBody.querySelector('.cursor-line');
-  if (cursorLine) {
-    cursorLine.remove();
-    terminalBody.appendChild(cursorLine);
-  }
+  if (cursorLine) { cursorLine.remove(); terminalBody.appendChild(cursorLine); }
 }
 
 function addSystemLog(message, type = 'info') {
@@ -174,22 +158,14 @@ function updateProgress(percent, text) {
   if (progressText) progressText.textContent = text;
 }
 
-function showProgress() {
-  if (progressWrapper) progressWrapper.style.display = 'block';
-}
-
-function hideProgress() {
-  if (progressWrapper) progressWrapper.style.display = 'none';
-  updateProgress(0, 'Idle');
-}
+function showProgress() { if (progressWrapper) progressWrapper.style.display = 'block'; }
+function hideProgress() { if (progressWrapper) progressWrapper.style.display = 'none'; updateProgress(0, 'Idle'); }
 
 function updateDashboard() {
   const activityList = document.getElementById('activityList');
-  
   if (activityList) {
-    if (activityLog.length === 0) {
-      activityList.innerHTML = '<div class="activity-item">Belum ada aktivitas</div>';
-    } else {
+    if (activityLog.length === 0) activityList.innerHTML = '<div class="activity-item">Belum ada aktivitas</div>';
+    else {
       activityList.innerHTML = activityLog.slice(0, 5).map(log => 
         `<div class="activity-item">${log.message.substring(0, 80)}</div>`
       ).join('');
@@ -250,7 +226,6 @@ async function authenticateAndVerify() {
     await new Promise(r => setTimeout(r, 300));
     addSystemLog('[SYSTEM] Access granted. Secure channel established.', 'success');
     
-    // Update UI
     document.getElementById('loginCard').style.display = 'none';
     pagesContainer.style.display = 'block';
     document.getElementById('userName').textContent = gitUsername;
@@ -259,10 +234,8 @@ async function authenticateAndVerify() {
     document.querySelector('.status-indicator').classList.add('connected');
     document.querySelector('.status-indicator span').textContent = 'Connected';
     
-    // Load stats
     await loadRepositories();
     navigateTo('home');
-    
     addSystemLog('[READY] System online. Select an operation.', 'success');
     
   } catch (err) {
@@ -283,6 +256,7 @@ function logout() {
   gitToken = "";
   isAuthenticated = false;
   pendingFiles = [];
+  extractedFiles = [];
   
   document.getElementById('loginCard').style.display = 'flex';
   pagesContainer.style.display = 'none';
@@ -323,52 +297,36 @@ async function executeCreateRepo() {
     commitCount++;
     document.getElementById('statCommits').textContent = commitCount;
     
-    // Clear form
     document.getElementById('newRepoName').value = '';
     document.getElementById('repoDesc').value = '';
     document.getElementById('repoPrivate').checked = false;
     
-    // Update stats
     await loadRepositories();
-    
     updateProgress(100, 'Complete!');
-    setTimeout(() => {
-      hideProgress();
-    }, 1500);
+    setTimeout(() => hideProgress(), 1500);
   } catch (err) {
     addSystemLog(`[ERROR] Failed: ${err.message}`, 'error');
     hideProgress();
   }
 }
 
-// =============== DELETE REPOSITORY (CORE FUNCTION) ===============
+// =============== DELETE REPOSITORY ===============
 async function deleteRepository(repoName) {
   return await githubRequest(`/repos/${gitUsername}/${repoName}`, 'DELETE');
 }
 
-// Delete dari halaman khusus
 async function executeDeleteFromPage() {
   const repoName = document.getElementById('deleteRepoName').value.trim();
   const confirmName = document.getElementById('confirmDeleteName').value.trim();
   
-  if (!repoName) {
-    addSystemLog('[ERROR] Repository name required!', 'error');
-    return;
-  }
-  
-  if (repoName !== confirmName) {
-    addSystemLog('[ERROR] Repository name confirmation mismatch!', 'error');
-    return;
-  }
+  if (!repoName) { addSystemLog('[ERROR] Repository name required!', 'error'); return; }
+  if (repoName !== confirmName) { addSystemLog('[ERROR] Repository name confirmation mismatch!', 'error'); return; }
   
   await executeDeleteRepo(repoName);
-  
-  // Clear form
   document.getElementById('deleteRepoName').value = '';
   document.getElementById('confirmDeleteName').value = '';
 }
 
-// Delete dari tombol di list repository
 async function executeDeleteRepo(repoName) {
   showTerminal();
   addSystemLog('[DANGER] Initiating repository deletion sequence...', 'warning');
@@ -382,17 +340,12 @@ async function executeDeleteRepo(repoName) {
     await deleteRepository(repoName);
     addSystemLog(`[SUCCESS] Repository "${repoName}" has been permanently deleted!`, 'success');
     updateProgress(100, 'Complete!');
-    
-    // Update stats
     await loadRepositories();
-    
-    // Update repo count
     const statRepos = document.getElementById('statRepos');
     if (statRepos) {
       const currentCount = parseInt(statRepos.textContent) || 0;
       statRepos.textContent = Math.max(0, currentCount - 1);
     }
-    
     setTimeout(() => hideProgress(), 1500);
   } catch (err) {
     addSystemLog(`[ERROR] Deletion failed: ${err.message}`, 'error');
@@ -418,15 +371,11 @@ async function loadRepositories() {
       return;
     }
     
-    // Update stat
     document.getElementById('statRepos').textContent = repos.length;
     
     container.innerHTML = repos.map(repo => `
       <div class="repo-card">
-        <div class="repo-name">
-          <i class="fas fa-book"></i>
-          ${escapeHtml(repo.name)}
-        </div>
+        <div class="repo-name"><i class="fas fa-book"></i> ${escapeHtml(repo.name)}</div>
         <div class="repo-desc">${escapeHtml(repo.description || 'No description')}</div>
         <div class="repo-meta">
           <span>${repo.private ? '🔒 Private' : '🌍 Public'}</span>
@@ -435,22 +384,17 @@ async function loadRepositories() {
           <span>📅 ${new Date(repo.updated_at).toLocaleDateString()}</span>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 12px;">
-          <a href="${repo.html_url}" target="_blank" class="repo-link" style="flex: 1; text-align: center;">
-            <i class="fab fa-github"></i> Open
-          </a>
-          <button class="btn-outline-small delete-repo-btn" data-repo="${repo.name}" style="flex: 1;">
-            <i class="fas fa-trash-alt"></i> Delete
-          </button>
+          <a href="${repo.html_url}" target="_blank" class="repo-link" style="flex: 1; text-align: center;"><i class="fab fa-github"></i> Open</a>
+          <button class="btn-outline-small delete-repo-btn" data-repo="${repo.name}" style="flex: 1;"><i class="fas fa-trash-alt"></i> Delete</button>
         </div>
       </div>
     `).join('');
     
-    // Add delete handlers to all delete buttons
     document.querySelectorAll('.delete-repo-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const repoName = btn.dataset.repo;
-        if (confirm(`⚠️ PERINGATAN! Anda akan menghapus repository "${repoName}" secara permanen.\n\nTindakan ini TIDAK DAPAT DIBATALKAN!\n\nKlik OK untuk melanjutkan.`)) {
+        if (confirm(`⚠️ PERINGATAN! Hapus repository "${repoName}" secara permanen?\nTindakan ini TIDAK DAPAT DIBATALKAN!`)) {
           await executeDeleteRepo(repoName);
         }
       });
@@ -461,49 +405,15 @@ async function loadRepositories() {
   }
 }
 
-// =============== UPLOAD FUNCTIONS ===============
-function setupUploadHandlers() {
-  const uploadArea = document.getElementById('uploadArea');
-  const fileInput = document.getElementById('fileInput');
-  const selectBtn = document.getElementById('selectFilesBtn');
-  const startBtn = document.getElementById('startUploadBtn');
-  
-  if (!uploadArea) return;
-  
-  uploadArea.onclick = () => fileInput.click();
-  if (selectBtn) selectBtn.onclick = (e) => { e.stopPropagation(); fileInput.click(); };
-  
-  fileInput.onchange = async (e) => {
-    const files = Array.from(e.target.files);
-    for (const f of files) {
-      pendingFiles.push(f);
-    }
-    updateFileList();
-  };
-  
-  uploadArea.ondragover = (e) => { 
-    e.preventDefault(); 
-    uploadArea.style.borderColor = '#7c3aed'; 
-  };
-  
-  uploadArea.ondragleave = () => { 
-    uploadArea.style.borderColor = '#252530'; 
-  };
-  
-  uploadArea.ondrop = async (e) => {
-    e.preventDefault();
-    uploadArea.style.borderColor = '#252530';
-    const items = e.dataTransfer.items;
-    for (let i = 0; i < items.length; i++) {
-      const entry = items[i].webkitGetAsEntry();
-      if (entry) await traverseFileTree(entry, pendingFiles);
-    }
-    updateFileList();
-  };
-  
-  if (startBtn) startBtn.onclick = startUpload;
+// =============== HELPER FUNCTIONS ===============
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
+// =============== FILE HANDLING ===============
 async function traverseFileTree(entry, files, path = '') {
   if (entry.isFile) {
     return new Promise(resolve => {
@@ -526,8 +436,57 @@ async function traverseFileTree(entry, files, path = '') {
   }
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+  });
+}
+
+async function uploadSingleFile(repo, filePath, content, msg) {
+  return await githubRequest(`/repos/${gitUsername}/${repo}/contents/${encodeURIComponent(filePath)}`, 'PUT', {
+    message: msg, content: content, branch: "main"
+  });
+}
+
+// =============== MODE 1: MULTI FILE/FOLDER UPLOAD ===============
+function setupMode1UploadHandlers() {
+  const uploadArea = document.getElementById('uploadArea1');
+  const fileInput = document.getElementById('fileInput1');
+  const selectBtn = document.getElementById('selectFilesBtn1');
+  const startBtn = document.getElementById('startUploadBtn1');
+  
+  if (!uploadArea) return;
+  
+  uploadArea.onclick = () => fileInput.click();
+  if (selectBtn) selectBtn.onclick = (e) => { e.stopPropagation(); fileInput.click(); };
+  
+  fileInput.onchange = async (e) => {
+    const files = Array.from(e.target.files);
+    for (const f of files) pendingFiles.push(f);
+    updateFileList();
+  };
+  
+  uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.style.borderColor = '#7c3aed'; };
+  uploadArea.ondragleave = () => { uploadArea.style.borderColor = '#252530'; };
+  uploadArea.ondrop = async (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#252530';
+    const items = e.dataTransfer.items;
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry();
+      if (entry) await traverseFileTree(entry, pendingFiles);
+    }
+    updateFileList();
+  };
+  
+  if (startBtn) startBtn.onclick = startMode1Upload;
+}
+
 function updateFileList() {
-  const fileListDiv = document.getElementById('fileList');
+  const fileListDiv = document.getElementById('fileList1');
   if (!fileListDiv) return;
   
   if (pendingFiles.length === 0) {
@@ -545,36 +504,15 @@ function updateFileList() {
   fileListDiv.innerHTML = html;
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-  });
-}
-
-async function uploadSingleFile(repo, filePath, content, msg) {
-  return await githubRequest(`/repos/${gitUsername}/${repo}/contents/${encodeURIComponent(filePath)}`, 'PUT', {
-    message: msg, content: content, branch: "main"
-  });
-}
-
-async function startUpload() {
-  const repo = document.getElementById('targetRepoName').value.trim();
-  const msg = document.getElementById('commitMsg').value.trim() || "Upload via RepoFlow";
+async function startMode1Upload() {
+  const repo = document.getElementById('targetRepoName1').value.trim();
+  const msg = document.getElementById('commitMsg1').value.trim() || "Upload via RepoFlow Mode 1";
   
-  if (!repo) {
-    addSystemLog('[ERROR] Target repository required!', 'error');
-    return;
-  }
-  if (pendingFiles.length === 0) {
-    addSystemLog('[ERROR] No files selected!', 'error');
-    return;
-  }
+  if (!repo) { addSystemLog('[ERROR] Target repository required!', 'error'); return; }
+  if (pendingFiles.length === 0) { addSystemLog('[ERROR] No files selected!', 'error'); return; }
   
   showTerminal();
-  addSystemLog('[UPLOAD] Starting upload sequence...', 'info');
+  addSystemLog('[UPLOAD MODE 1] Starting multi file upload...', 'info');
   addSystemLog(`[TARGET] ${gitUsername}/${repo}`, 'info');
   addSystemLog(`[FILES] Total: ${pendingFiles.length} files`, 'info');
   showProgress();
@@ -586,7 +524,7 @@ async function startUpload() {
     const filePath = file.webkitRelativePath || file.name;
     const percent = ((i / pendingFiles.length) * 100).toFixed(1);
     updateProgress(percent, `${i+1}/${pendingFiles.length} - ${filePath.substring(0, 40)}`);
-    addSystemLog(`[UPLOAD] Sending: ${filePath} (${(file.size/1024).toFixed(1)} KB)`, 'info');
+    addSystemLog(`[UPLOAD] ${filePath} (${(file.size/1024).toFixed(1)} KB)`, 'info');
     
     try {
       const base64 = await fileToBase64(file);
@@ -603,7 +541,7 @@ async function startUpload() {
   updateProgress(100, 'Complete!');
   
   if (error === 0) {
-    addSystemLog(`[SUCCESS] Upload completed! ${success} files uploaded to ${repo}`, 'success');
+    addSystemLog(`[SUCCESS] Mode 1 completed! ${success} files uploaded to ${repo}`, 'success');
     uploadCount += success;
     commitCount++;
     document.getElementById('statUploads').textContent = uploadCount;
@@ -611,20 +549,169 @@ async function startUpload() {
     pendingFiles = [];
     updateFileList();
   } else {
-    addSystemLog(`[WARNING] Upload completed with errors: ${success} success, ${error} failed`, 'warning');
+    addSystemLog(`[WARNING] Mode 1 completed with errors: ${success} success, ${error} failed`, 'warning');
   }
   
   setTimeout(() => {
     hideProgress();
-    document.getElementById('targetRepoName').value = '';
-    document.getElementById('commitMsg').value = '';
+    document.getElementById('targetRepoName1').value = '';
+    document.getElementById('commitMsg1').value = '';
   }, 2000);
 }
 
-// =============== HELPER FUNCTIONS ===============
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+// =============== MODE 2: ARCHIVE UPLOAD (ZIP) ===============
+let archiveFile = null;
+
+function setupMode2UploadHandlers() {
+  const uploadArea = document.getElementById('uploadArea2');
+  const fileInput = document.getElementById('fileInput2');
+  const selectBtn = document.getElementById('selectFilesBtn2');
+  const startBtn = document.getElementById('startUploadBtn2');
+  
+  if (!uploadArea) return;
+  
+  uploadArea.onclick = () => fileInput.click();
+  if (selectBtn) selectBtn.onclick = (e) => { e.stopPropagation(); fileInput.click(); };
+  
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    archiveFile = file;
+    await processArchiveFile(file);
+  };
+  
+  uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.style.borderColor = '#7c3aed'; };
+  uploadArea.ondragleave = () => { uploadArea.style.borderColor = '#252530'; };
+  uploadArea.ondrop = async (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#252530';
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      archiveFile = file;
+      await processArchiveFile(file);
+    }
+  };
+  
+  if (startBtn) startBtn.onclick = startMode2Upload;
+}
+
+async function processArchiveFile(file) {
+  const previewDiv = document.getElementById('archivePreview');
+  const archiveNameSpan = document.getElementById('archiveName');
+  const archiveFileCountSpan = document.getElementById('archiveFileCount');
+  const extractedPreviewDiv = document.getElementById('extractedPreview');
+  const startBtn = document.getElementById('startUploadBtn2');
+  
+  if (archiveNameSpan) archiveNameSpan.textContent = file.name;
+  
+  addSystemLog(`[ARCHIVE] Processing ${file.name}...`, 'info');
+  showProgress();
+  updateProgress(30, `Extracting ${file.name}...`);
+  
+  try {
+    extractedFiles = await extractArchive(file);
+    if (archiveFileCountSpan) archiveFileCountSpan.textContent = `${extractedFiles.length} files`;
+    
+    if (previewDiv) previewDiv.style.display = 'block';
+    if (startBtn) startBtn.style.display = 'flex';
+    
+    // Preview extracted files
+    if (extractedPreviewDiv && extractedFiles.length > 0) {
+      let html = '<div style="margin-top: 10px;"><strong>📄 Extracted files:</strong></div>';
+      extractedFiles.slice(0, 20).forEach(f => {
+        const path = f.webkitRelativePath || f.name;
+        html += `<div style="font-size: 0.7rem; margin: 3px 0;">├─ ${escapeHtml(path)} (${(f.size/1024).toFixed(1)} KB)</div>`;
+      });
+      if (extractedFiles.length > 20) html += `<div>... and ${extractedFiles.length - 20} more files</div>`;
+      extractedPreviewDiv.innerHTML = html;
+    }
+    
+    addSystemLog(`[SUCCESS] Archive extracted: ${extractedFiles.length} files ready`, 'success');
+    updateProgress(100, 'Extraction complete!');
+    setTimeout(() => hideProgress(), 1000);
+  } catch (err) {
+    addSystemLog(`[ERROR] Archive extraction failed: ${err.message}`, 'error');
+    hideProgress();
+  }
+}
+
+async function extractArchive(file) {
+  const fileName = file.name.toLowerCase();
+  let files = [];
+  
+  try {
+    if (fileName.endsWith('.zip')) {
+      const zip = await JSZip.loadAsync(file);
+      for (const [path, entry] of Object.entries(zip.files)) {
+        if (!entry.dir) {
+          const content = await entry.async('blob');
+          const f = new File([content], path.split('/').pop(), { type: content.type });
+          Object.defineProperty(f, 'webkitRelativePath', { value: path, writable: false });
+          files.push(f);
+        }
+      }
+    } else {
+      throw new Error(`Format ${fileName.split('.').pop()} tidak didukung. Gunakan file ZIP.`);
+    }
+    return files;
+  } catch (error) {
+    throw new Error(`Extract failed: ${error.message}`);
+  }
+}
+
+async function startMode2Upload() {
+  const repo = document.getElementById('targetRepoName2').value.trim();
+  const msg = document.getElementById('commitMsg2').value.trim() || "Upload archive via RepoFlow Mode 2";
+  
+  if (!repo) { addSystemLog('[ERROR] Target repository required!', 'error'); return; }
+  if (extractedFiles.length === 0) { addSystemLog('[ERROR] No archive extracted! Upload ZIP file first.', 'error'); return; }
+  
+  showTerminal();
+  addSystemLog('[UPLOAD MODE 2] Starting archive upload...', 'info');
+  addSystemLog(`[TARGET] ${gitUsername}/${repo}`, 'info');
+  addSystemLog(`[ARCHIVE] ${archiveFile?.name} -> ${extractedFiles.length} files`, 'info');
+  showProgress();
+  
+  let success = 0, error = 0;
+  
+  for (let i = 0; i < extractedFiles.length; i++) {
+    const file = extractedFiles[i];
+    const filePath = file.webkitRelativePath || file.name;
+    const percent = ((i / extractedFiles.length) * 100).toFixed(1);
+    updateProgress(percent, `${i+1}/${extractedFiles.length} - ${filePath.substring(0, 40)}`);
+    addSystemLog(`[UPLOAD] ${filePath} (${(file.size/1024).toFixed(1)} KB)`, 'info');
+    
+    try {
+      const base64 = await fileToBase64(file);
+      await uploadSingleFile(repo, filePath, base64, `${msg} - ${archiveFile?.name} (${i+1}/${extractedFiles.length})`);
+      success++;
+      addSystemLog(`[SUCCESS] Uploaded: ${filePath}`, 'success');
+    } catch (err) {
+      error++;
+      addSystemLog(`[ERROR] Failed: ${filePath} - ${err.message}`, 'error');
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  
+  updateProgress(100, 'Complete!');
+  
+  if (error === 0) {
+    addSystemLog(`[SUCCESS] Mode 2 completed! ${success} files from archive uploaded to ${repo}`, 'success');
+    uploadCount += success;
+    commitCount++;
+    document.getElementById('statUploads').textContent = uploadCount;
+    document.getElementById('statCommits').textContent = commitCount;
+    extractedFiles = [];
+    archiveFile = null;
+    document.getElementById('archivePreview').style.display = 'none';
+    document.getElementById('startUploadBtn2').style.display = 'none';
+  } else {
+    addSystemLog(`[WARNING] Mode 2 completed with errors: ${success} success, ${error} failed`, 'warning');
+  }
+  
+  setTimeout(() => {
+    hideProgress();
+    document.getElementById('targetRepoName2').value = '';
+    document.getElementById('commitMsg2').value = '';
+  }, 2000);
 }
