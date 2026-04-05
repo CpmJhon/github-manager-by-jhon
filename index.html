@@ -2,143 +2,279 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>GitHub Manager | Cyberpunk Terminal Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>RepoFlow | GitHub Manager Premium</title>
+  <meta name="description" content="Upload, push, dan kelola repository GitHub dengan terminal live modern">
+  <meta name="theme-color" content="#0a0a0f">
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <!-- JSZip Library -->
+  <!-- JSZip Library untuk extract ZIP -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Cyberpunk Grid Overlay -->
-  <div class="cyber-grid"></div>
-  <div class="gradient-orb"></div>
-  
-  <div class="container">
-    <!-- Header -->
-    <div class="cyber-header">
-      <div class="glitch-wrapper">
-        <h1 class="glitch-text" data-text="█║▌│█│║▌║│█║ GITHUB MANAGER █║▌│█│║▌║│█║">
-          █║▌│█│║▌║│█║ GITHUB MANAGER █║▌│█│║▌║│█║
-        </h1>
+  <div class="app">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="logo">
+        <i class="fab fa-github"></i>
+        <span>Repo<span class="highlight">Flow</span></span>
       </div>
-      <div class="hacker-tagline">
-        <span class="typing-text">>_ TERMINAL OPERATION SYSTEM v3.0</span>
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active" data-page="home">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </a>
+        <a href="#" class="nav-item" data-page="dashboard">
+          <i class="fas fa-chart-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="create">
+          <i class="fas fa-plus-circle"></i>
+          <span>Create Repo</span>
+        </a>
+        <a href="#" class="nav-item" data-page="upload">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <span>Upload</span>
+        </a>
+        <a href="#" class="nav-item" data-page="repos">
+          <i class="fas fa-list"></i>
+          <span>Repositories</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="status-indicator" id="connectionStatus">
+          <i class="fas fa-circle"></i>
+          <span>Disconnected</span>
+        </div>
       </div>
-      <div class="status-led">
-        <span class="led red"></span>
-        <span class="led yellow"></span>
-        <span class="led green"></span>
-        <span class="led blue"></span>
-      </div>
-    </div>
+    </aside>
 
-    <!-- Auth Card -->
-    <div class="glass-card neon-border" id="authCard">
-      <div class="card-header">
-        <i class="fas fa-shield-haltered"></i>
-        <h3>[ AUTHENTICATION_PROTOCOL ]</h3>
-      </div>
-      <div class="input-group-neon">
-        <label><i class="fas fa-user-astronaut"></i> >_ USERNAME::</label>
-        <input type="text" id="githubUsername" placeholder="cyber_hacker" class="cyber-input">
-      </div>
-      <div class="input-group-neon">
-        <label><i class="fas fa-key"></i> >_ PERSONAL_ACCESS_TOKEN::</label>
-        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" class="cyber-input">
-        <small class="input-hint">[!] Token requires: repo, delete_repo, workflow</small>
-      </div>
-      <button id="authBtn" class="neon-btn cyber-btn">
-        <i class="fas fa-plug"></i> [ CONNECT_TO_GITHUB ]
-      </button>
-      <div id="authStatus" class="terminal-message"></div>
-    </div>
-
-    <!-- Main Menu -->
-    <div id="mainMenu" style="display: none;">
-      <div class="glass-card neon-border">
-        <div class="user-bar">
-          <div class="user-info">
-            <i class="fas fa-terminal"></i> 
-            <span class="prompt">[root@github]</span>
-            <span class="user-path">~/</span>
-            <span id="currentUser" class="username">-</span>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <button class="menu-toggle" id="menuToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="user-section" id="userSection">
+          <div class="auth-badge" id="authBadge">
+            <i class="fas fa-user-circle"></i>
+            <span id="userName">Guest</span>
           </div>
-          <button id="logoutBtn" class="neon-btn small">
-            <i class="fas fa-power-off"></i> [ DISCONNECT ]
+          <button class="btn-login" id="showLoginBtn">
+            <i class="fas fa-sign-in-alt"></i>
+            <span>Login</span>
+          </button>
+          <button class="btn-logout" id="logoutBtn" style="display: none;">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
           </button>
         </div>
-        
-        <div class="button-grid">
-          <button id="showCreateRepo" class="neon-btn cyber-btn">
-            <i class="fas fa-plus-circle"></i> [ CREATE_REPO ]
-          </button>
-          <button id="showDeleteRepo" class="neon-btn cyber-btn danger">
-            <i class="fas fa-trash-alt"></i> [ DELETE_REPO ]
-          </button>
-          <button id="showUploadProyek" class="neon-btn cyber-btn success">
-            <i class="fas fa-cloud-upload-alt"></i> [ UPLOAD_MODE ]
-          </button>
-          <button id="showListRepo" class="neon-btn cyber-btn info">
-            <i class="fas fa-list"></i> [ LIST_REPOS ]
-          </button>
-        </div>
-        
-        <div id="actionPanel" class="action-panel"></div>
-      </div>
-    </div>
+      </header>
 
-    <!-- Live Terminal Premium -->
-    <div class="terminal-live" id="liveTerminal" style="display: none;">
-      <div class="terminal-header">
-        <div class="terminal-controls">
-          <div class="terminal-dot red"></div>
-          <div class="terminal-dot yellow"></div>
-          <div class="terminal-dot green"></div>
-        </div>
-        <div class="terminal-title">
-          <i class="fas fa-terminal"></i> [ CYBERPUNK_TERMINAL_v3.0 ] — zsh
-        </div>
-        <div class="terminal-status" id="terminalStatus">● ONLINE</div>
-      </div>
-      <div class="terminal-body" id="terminalBody">
-        <div class="terminal-welcome">
-          <pre class="ascii-art">
-╔═══════════════════════════════════════════════════════════════════╗
-║  ██████╗ ██╗   ██╗██████╗ ███████╗██████╗ ██████╗ ██╗   ██╗███╗   ██╗██╗  ██╗
-║  ██╔══██╗╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗██╔══██╗╚██╗ ██╔╝████╗  ██║██║ ██╔╝
-║  ██████╔╝ ╚████╔╝ ██████╔╝█████╗  ██████╔╝██████╔╝ ╚████╔╝ ██╔██╗ ██║█████╔╝ 
-║  ██╔══██╗  ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗██╔══██╗  ╚██╔╝  ██║╚██╗██║██╔═██╗ 
-║  ██████╔╝   ██║   ██████╔╝███████╗██║  ██║██████╔╝   ██║   ██║ ╚████║██║  ██╗
-║  ╚═════╝    ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝
-╚═══════════════════════════════════════════════════════════════════╝
-          </pre>
-          <div class="log-line log-info">> [SYSTEM] Initializing cyberpunk engine v3.0...</div>
-          <div class="log-line log-info">> [SYSTEM] Loading modules... DONE</div>
-          <div class="log-line log-info">> [SYSTEM] Establishing secure channel...</div>
-          <div class="log-line log-info">> [SYSTEM] Ready for operation. Select a task to begin.</div>
-        </div>
-        <div class="cursor-line">
-          <span class="prompt">[root@github]~$</span>
-          <span class="blinking-cursor">_</span>
-        </div>
-      </div>
-      <div class="terminal-footer">
-        <div class="progress-container" id="progressContainer" style="display: none;">
-          <div class="progress-bar-neon">
-            <div class="progress-fill" id="progressFill"></div>
+      <!-- Login Card -->
+      <div class="login-card" id="loginCard">
+        <div class="card">
+          <div class="card-header">
+            <i class="fab fa-github"></i>
+            <h2>GitHub Authentication</h2>
+            <p>Connect your GitHub account to start managing repositories</p>
           </div>
-          <div class="progress-stats">
-            <span id="progressPercent">0%</span>
-            <span id="progressText">[ IDLE ]</span>
+          <div class="card-body">
+            <div class="input-group">
+              <label>Username</label>
+              <input type="text" id="githubUsername" placeholder="your_username" class="modern-input">
+            </div>
+            <div class="input-group">
+              <label>Personal Access Token</label>
+              <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" class="modern-input">
+              <small>Requires: repo, delete_repo permissions</small>
+            </div>
+            <button id="authBtn" class="btn-primary">
+              <i class="fas fa-plug"></i>
+              <span>Connect to GitHub</span>
+            </button>
+            <div id="authStatus" class="message-area"></div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- Content Pages -->
+      <div class="pages-container" id="pagesContainer" style="display: none;">
+        <!-- Home Page -->
+        <div class="page" id="homePage">
+          <div class="welcome-section">
+            <div class="hero">
+              <h1>Welcome to <span class="gradient-text">RepoFlow</span></h1>
+              <p>Upload, push, dan kelola repository GitHub Anda dengan terminal live yang powerful</p>
+              <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                  <i class="fas fa-database"></i>
+                  <div class="stat-info">
+                    <span class="stat-value" id="statRepos">0</span>
+                    <span class="stat-label">Repositories</span>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  <div class="stat-info">
+                    <span class="stat-value" id="statUploads">0</span>
+                    <span class="stat-label">Uploads</span>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <i class="fas fa-code-branch"></i>
+                  <div class="stat-info">
+                    <span class="stat-value" id="statCommits">0</span>
+                    <span class="stat-label">Commits</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div class="page" id="dashboardPage" style="display: none;">
+          <div class="section-header">
+            <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
+            <p>Overview aktivitas GitHub Anda</p>
+          </div>
+          <div class="dashboard-grid">
+            <div class="dashboard-card">
+              <h3>Recent Activity</h3>
+              <div class="activity-list" id="activityList">
+                <div class="activity-item">Belum ada aktivitas</div>
+              </div>
+            </div>
+            <div class="dashboard-card">
+              <h3>Quick Actions</h3>
+              <div class="quick-actions">
+                <button class="quick-btn" data-page="create">
+                  <i class="fas fa-plus-circle"></i> New Repository
+                </button>
+                <button class="quick-btn" data-page="upload">
+                  <i class="fas fa-upload"></i> Upload Project
+                </button>
+                <button class="quick-btn" data-page="repos">
+                  <i class="fas fa-list"></i> View Repositories
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Repo Page -->
+        <div class="page" id="createPage" style="display: none;">
+          <div class="section-header">
+            <h2><i class="fas fa-plus-circle"></i> Create Repository</h2>
+            <p>Buat repository baru di GitHub</p>
+          </div>
+          <div class="form-card">
+            <div class="input-group">
+              <label>Repository Name</label>
+              <input type="text" id="newRepoName" placeholder="my-awesome-project" class="modern-input">
+            </div>
+            <div class="input-group">
+              <label>Description</label>
+              <textarea id="repoDesc" rows="3" placeholder="Deskripsi project..." class="modern-input"></textarea>
+            </div>
+            <div class="checkbox-group">
+              <label>
+                <input type="checkbox" id="repoPrivate"> Private repository
+              </label>
+            </div>
+            <button id="confirmCreateRepo" class="btn-primary">
+              <i class="fas fa-code-branch"></i> Create Repository
+            </button>
+          </div>
+        </div>
+
+        <!-- Upload Page -->
+        <div class="page" id="uploadPage" style="display: none;">
+          <div class="section-header">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Upload Project</h2>
+            <p>Upload file/folder atau ZIP ke repository</p>
+          </div>
+          <div class="form-card">
+            <div class="input-group">
+              <label>Target Repository</label>
+              <input type="text" id="targetRepoName" placeholder="repository-name" class="modern-input">
+            </div>
+            <div class="input-group">
+              <label>Commit Message</label>
+              <input type="text" id="commitMsg" placeholder="Upload project via RepoFlow" class="modern-input">
+            </div>
+            <div class="upload-area" id="uploadArea">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <p>Drag & drop files/folders here</p>
+              <button id="selectFilesBtn" class="btn-outline">Select Files</button>
+              <input type="file" id="fileInput" multiple webkitdirectory style="display: none;">
+            </div>
+            <div id="fileList" class="file-list"></div>
+            <button id="startUploadBtn" class="btn-primary">
+              <i class="fas fa-rocket"></i> Start Upload
+            </button>
+          </div>
+        </div>
+
+        <!-- Repositories Page -->
+        <div class="page" id="reposPage" style="display: none;">
+          <div class="section-header">
+            <h2><i class="fas fa-list"></i> Repositories</h2>
+            <p>Daftar semua repository GitHub Anda</p>
+            <button id="refreshReposBtn" class="btn-outline-small">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+          <div id="repoListContainer" class="repo-grid"></div>
+        </div>
+      </div>
+
+      <!-- Live Terminal -->
+      <div class="terminal-container" id="terminalContainer" style="display: none;">
+        <div class="terminal-header">
+          <div class="terminal-controls">
+            <span class="control red"></span>
+            <span class="control yellow"></span>
+            <span class="control green"></span>
+          </div>
+          <div class="terminal-title">
+            <i class="fas fa-terminal"></i>
+            <span>Live Terminal</span>
+          </div>
+          <button class="terminal-close" id="closeTerminalBtn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="terminal-body" id="terminalBody">
+          <div class="terminal-welcome">
+            <div class="log-line log-info">> [SYSTEM] RepoFlow Terminal v2.0</div>
+            <div class="log-line log-info">> [SYSTEM] Live terminal ready</div>
+            <div class="log-line log-info">> [SYSTEM] Waiting for operations...</div>
+          </div>
+          <div class="cursor-line">
+            <span class="prompt">$</span>
+            <span class="blinking-cursor">_</span>
+          </div>
+        </div>
+        <div class="terminal-footer">
+          <div class="progress-wrapper" id="progressWrapper" style="display: none;">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="progressPercent">0%</span>
+              <span id="progressText">Idle</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <script src="js/script.js"></script>
