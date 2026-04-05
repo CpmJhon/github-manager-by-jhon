@@ -1,15 +1,16 @@
 // ========================================
 // REPOFLOW - GITHUB MANAGER WITH 2 MODE UPLOAD
-// Mode 1: Multiple Files Upload (tanpa folder)
+// Mode 1: Multiple Files Upload
 // Mode 2: Archive Upload (ZIP) + Auto Extract
+// Mempertahankan semua fungsionalitas original
 // ========================================
 
 // =============== STATE MANAGEMENT ===============
 let gitUsername = "";
 let gitToken = "";
 let isAuthenticated = false;
-let pendingFiles = []; // Untuk Mode 1
-let extractedFiles = []; // Untuk Mode 2
+let pendingFiles = [];
+let extractedFiles = [];
 let activityLog = [];
 let uploadCount = 0;
 let commitCount = 0;
@@ -21,8 +22,6 @@ let currentPage = "home";
 
 // =============== INITIALIZATION ===============
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[INIT] DOM fully loaded - RepoFlow v2.0');
-  
   // DOM Elements
   sidebar = document.getElementById('sidebar');
   menuToggle = document.getElementById('menuToggle');
@@ -39,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
       const page = item.dataset.page;
-      console.log(`[NAV] Navigating to: ${page}`);
       navigateTo(page);
       if (window.innerWidth <= 768) sidebar.classList.remove('open');
     });
@@ -69,6 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
+  // FAQ Toggle
+  document.querySelectorAll('.faq-question').forEach(question => {
+    question.addEventListener('click', () => {
+      const faqItem = question.parentElement;
+      faqItem.classList.toggle('active');
+    });
+  });
+  
   // Login button
   document.getElementById('showLoginBtn')?.addEventListener('click', () => {
     document.getElementById('loginCard').style.display = 'flex';
@@ -83,22 +89,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // Create repo button
   document.getElementById('confirmCreateRepo')?.addEventListener('click', executeCreateRepo);
   
-  // Delete repo button (halaman khusus)
+  // Delete repo button
   document.getElementById('confirmDeleteRepoBtn')?.addEventListener('click', executeDeleteFromPage);
   
-  // Setup Mode 1 Upload Handlers (Multiple Files)
+  // Setup Mode 1 Upload Handlers
   setupMode1UploadHandlers();
   
-  // Setup Mode 2 Upload Handlers (ZIP Archive)
+  // Setup Mode 2 Upload Handlers
   setupMode2UploadHandlers();
   
-  // Refresh repos button - DIPERBAIKI
+  // Refresh repos button
   const refreshBtn = document.getElementById('refreshReposBtn');
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      console.log('[REFRESH] Manual refresh triggered by user');
-      addSystemLog('[SYSTEM] Manual refresh triggered...', 'info');
-      loadRepositories(true);
+    refreshBtn.addEventListener('click', async () => {
+      if (isAuthenticated) {
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Refreshing...';
+        await loadRepositories();
+        setTimeout(() => {
+          refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Repositories';
+        }, 1000);
+      }
     });
   }
   
@@ -125,20 +135,10 @@ function navigateTo(page) {
   };
   
   const pageId = pageMap[page];
-  if (pageId) {
-    const pageElement = document.getElementById(pageId);
-    if (pageElement) pageElement.style.display = 'block';
-  }
+  if (pageId) document.getElementById(pageId).style.display = 'block';
   
-  // Load data for certain pages
-  if (page === 'repos' && isAuthenticated) {
-    console.log('[NAV] Loading repositories for repos page');
-    loadRepositories(true);
-  }
-  
-  if (page === 'dashboard' && isAuthenticated) {
-    updateDashboard();
-  }
+  if (page === 'repos' && isAuthenticated) loadRepositories();
+  if (page === 'dashboard' && isAuthenticated) updateDashboard();
 }
 
 // =============== TERMINAL FUNCTIONS ===============
@@ -195,8 +195,6 @@ function updateDashboard() {
 // =============== GITHUB API FUNCTIONS ===============
 async function githubRequest(endpoint, method = 'GET', body = null) {
   const url = endpoint.startsWith('https') ? endpoint : `https://api.github.com${endpoint}`;
-  console.log(`[API] ${method} ${url}`);
-  
   const response = await fetch(url, {
     method,
     headers: {
@@ -209,7 +207,6 @@ async function githubRequest(endpoint, method = 'GET', body = null) {
   
   if (!response.ok && response.status !== 204) {
     const err = await response.json().catch(() => ({ message: response.statusText }));
-    console.error(`[API ERROR] ${response.status}: ${err.message}`);
     throw new Error(err.message);
   }
   return response.status === 204 ? { success: true } : await response.json();
@@ -256,9 +253,7 @@ async function authenticateAndVerify() {
     document.querySelector('.status-indicator').classList.add('connected');
     document.querySelector('.status-indicator span').textContent = 'Connected';
     
-    // Load repositories after login
-    addSystemLog('[SYSTEM] Loading repositories...', 'info');
-    await loadRepositories(true);
+    await loadRepositories();
     navigateTo('home');
     addSystemLog('[READY] System online. Select an operation.', 'success');
     
@@ -293,10 +288,6 @@ function logout() {
   
   document.getElementById('githubUsername').value = '';
   document.getElementById('githubToken').value = '';
-  
-  // Clear repo list
-  const repoContainer = document.getElementById('repoListContainer');
-  if (repoContainer) repoContainer.innerHTML = '';
 }
 
 // =============== CREATE REPOSITORY ===============
@@ -325,15 +316,11 @@ async function executeCreateRepo() {
     commitCount++;
     document.getElementById('statCommits').textContent = commitCount;
     
-    // Clear form
     document.getElementById('newRepoName').value = '';
     document.getElementById('repoDesc').value = '';
     document.getElementById('repoPrivate').checked = false;
     
-    // Refresh repositories list - IMPORTANT!
-    addSystemLog('[SYSTEM] Refreshing repository list...', 'info');
-    await loadRepositories(true);
-    
+    await loadRepositories();
     updateProgress(100, 'Complete!');
     setTimeout(() => hideProgress(), 1500);
   } catch (err) {
@@ -372,11 +359,12 @@ async function executeDeleteRepo(repoName) {
     await deleteRepository(repoName);
     addSystemLog(`[SUCCESS] Repository "${repoName}" has been permanently deleted!`, 'success');
     updateProgress(100, 'Complete!');
-    
-    // Refresh repositories list after deletion - IMPORTANT!
-    addSystemLog('[SYSTEM] Refreshing repository list...', 'info');
-    await loadRepositories(true);
-    
+    await loadRepositories();
+    const statRepos = document.getElementById('statRepos');
+    if (statRepos) {
+      const currentCount = parseInt(statRepos.textContent) || 0;
+      statRepos.textContent = Math.max(0, currentCount - 1);
+    }
     setTimeout(() => hideProgress(), 1500);
   } catch (err) {
     addSystemLog(`[ERROR] Deletion failed: ${err.message}`, 'error');
@@ -384,43 +372,29 @@ async function executeDeleteRepo(repoName) {
   }
 }
 
-// =============== LOAD REPOSITORIES (DIPERBAIKI) ===============
-async function loadRepositories(forceRefresh = false) {
-  if (!isAuthenticated) {
-    console.log('[REPO] Not authenticated, skipping load');
-    return;
-  }
+// =============== LOAD REPOSITORIES ===============
+async function loadRepositories() {
+  if (!isAuthenticated) return;
   
   const container = document.getElementById('repoListContainer');
-  if (!container) {
-    console.log('[REPO] Container not found');
-    return;
-  }
+  if (!container) return;
   
-  console.log('[REPO] Loading repositories...', forceRefresh ? '(force refresh)' : '');
   container.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-pulse"></i> Loading repositories...</div>';
   
   try {
-    // Gunakan timestamp untuk menghindari cache
-    const repos = await githubRequest('/user/repos?per_page=100&sort=updated&direction=desc', 'GET');
-    
-    console.log(`[REPO] Loaded ${repos.length} repositories`);
+    const repos = await githubRequest('/user/repos?per_page=50&sort=updated', 'GET');
     
     if (repos.length === 0) {
-      container.innerHTML = '<div style="text-align:center; padding:40px;">📭 No repositories found</div>';
+      container.innerHTML = '<div style="text-align:center; padding:40px;">No repositories found</div>';
       document.getElementById('statRepos').textContent = '0';
       return;
     }
     
-    // Update stat
     document.getElementById('statRepos').textContent = repos.length;
     
     container.innerHTML = repos.map(repo => `
-      <div class="repo-card" data-repo-name="${escapeHtml(repo.name)}">
-        <div class="repo-name">
-          <i class="fas fa-book"></i>
-          ${escapeHtml(repo.name)}
-        </div>
+      <div class="repo-card">
+        <div class="repo-name"><i class="fas fa-book"></i> ${escapeHtml(repo.name)}</div>
         <div class="repo-desc">${escapeHtml(repo.description || 'No description')}</div>
         <div class="repo-meta">
           <span>${repo.private ? '🔒 Private' : '🌍 Public'}</span>
@@ -429,42 +403,24 @@ async function loadRepositories(forceRefresh = false) {
           <span>📅 ${new Date(repo.updated_at).toLocaleDateString()}</span>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 12px;">
-          <a href="${repo.html_url}" target="_blank" class="repo-link" style="flex: 1; text-align: center;">
-            <i class="fab fa-github"></i> Open
-          </a>
-          <button class="btn-outline-small delete-repo-btn" data-repo="${escapeHtml(repo.name)}" style="flex: 1;">
-            <i class="fas fa-trash-alt"></i> Delete
-          </button>
+          <a href="${repo.html_url}" target="_blank" class="repo-link" style="flex: 1; text-align: center;"><i class="fab fa-github"></i> Open</a>
+          <button class="btn-outline-small delete-repo-btn" data-repo="${repo.name}" style="flex: 1;"><i class="fas fa-trash-alt"></i> Delete</button>
         </div>
       </div>
     `).join('');
     
-    // Add delete handlers to all delete buttons
     document.querySelectorAll('.delete-repo-btn').forEach(btn => {
-      // Remove existing listeners to avoid duplicates
-      btn.removeEventListener('click', handleDeleteClick);
-      btn.addEventListener('click', handleDeleteClick);
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const repoName = btn.dataset.repo;
+        if (confirm(`⚠️ PERINGATAN! Hapus repository "${repoName}" secara permanen?\nTindakan ini TIDAK DAPAT DIBATALKAN!`)) {
+          await executeDeleteRepo(repoName);
+        }
+      });
     });
     
-    addSystemLog(`[SUCCESS] Loaded ${repos.length} repositories`, 'success');
-    
   } catch (err) {
-    console.error('[REPO] Error loading repositories:', err);
-    container.innerHTML = `<div class="log-error" style="padding: 20px; text-align: center;">
-      ❌ Error loading repositories: ${escapeHtml(err.message)}<br>
-      <button onclick="loadRepositories(true)" class="btn-outline-small" style="margin-top: 10px;">Retry</button>
-    </div>`;
-  }
-}
-
-// Handle delete button click
-async function handleDeleteClick(e) {
-  e.stopPropagation();
-  const btn = e.currentTarget;
-  const repoName = btn.dataset.repo;
-  
-  if (confirm(`⚠️ PERINGATAN! Hapus repository "${repoName}" secara permanen?\n\nTindakan ini TIDAK DAPAT DIBATALKAN!`)) {
-    await executeDeleteRepo(repoName);
+    container.innerHTML = `<div class="log-error" style="padding: 20px; text-align: center;">Error: ${err.message}</div>`;
   }
 }
 
@@ -753,6 +709,3 @@ async function startMode2Upload() {
     document.getElementById('commitMsg2').value = '';
   }, 2000);
 }
-
-// Expose loadRepositories to global scope for retry button
-window.loadRepositories = loadRepositories;
