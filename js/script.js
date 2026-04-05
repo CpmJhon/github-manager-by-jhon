@@ -1,6 +1,9 @@
 // ========================================
 // REPOFLOW - GITHUB MANAGER WITH LIVE TERMINAL
 // Mempertahankan semua fungsionalitas original
+// Fitur Delete Repository: 
+// 1. Halaman Delete Repo khusus
+// 2. Tombol Delete di setiap card repository
 // ========================================
 
 // =============== STATE MANAGEMENT ===============
@@ -73,6 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Create repo button
   document.getElementById('confirmCreateRepo')?.addEventListener('click', executeCreateRepo);
   
+  // Delete repo button (halaman khusus)
+  document.getElementById('confirmDeleteRepoBtn')?.addEventListener('click', executeDeleteFromPage);
+  
   // Upload handlers
   setupUploadHandlers();
   
@@ -107,6 +113,7 @@ function navigateTo(page) {
     home: 'homePage',
     dashboard: 'dashboardPage',
     create: 'createPage',
+    delete: 'deletePage',
     upload: 'uploadPage',
     repos: 'reposPage'
   };
@@ -290,7 +297,7 @@ function logout() {
   document.getElementById('githubToken').value = '';
 }
 
-// =============== REPOSITORY OPERATIONS ===============
+// =============== CREATE REPOSITORY ===============
 async function executeCreateRepo() {
   const name = document.getElementById('newRepoName').value.trim();
   const desc = document.getElementById('repoDesc').value;
@@ -334,10 +341,66 @@ async function executeCreateRepo() {
   }
 }
 
-async function deleteRepository(name) {
-  return await githubRequest(`/repos/${gitUsername}/${name}`, 'DELETE');
+// =============== DELETE REPOSITORY (CORE FUNCTION) ===============
+async function deleteRepository(repoName) {
+  return await githubRequest(`/repos/${gitUsername}/${repoName}`, 'DELETE');
 }
 
+// Delete dari halaman khusus
+async function executeDeleteFromPage() {
+  const repoName = document.getElementById('deleteRepoName').value.trim();
+  const confirmName = document.getElementById('confirmDeleteName').value.trim();
+  
+  if (!repoName) {
+    addSystemLog('[ERROR] Repository name required!', 'error');
+    return;
+  }
+  
+  if (repoName !== confirmName) {
+    addSystemLog('[ERROR] Repository name confirmation mismatch!', 'error');
+    return;
+  }
+  
+  await executeDeleteRepo(repoName);
+  
+  // Clear form
+  document.getElementById('deleteRepoName').value = '';
+  document.getElementById('confirmDeleteName').value = '';
+}
+
+// Delete dari tombol di list repository
+async function executeDeleteRepo(repoName) {
+  showTerminal();
+  addSystemLog('[DANGER] Initiating repository deletion sequence...', 'warning');
+  addSystemLog(`[TARGET] Repository: ${repoName}`, 'info');
+  addSystemLog('[WARNING] This action cannot be undone!', 'warning');
+  showProgress();
+  updateProgress(50, 'Deleting repository...');
+  await new Promise(r => setTimeout(r, 500));
+  
+  try {
+    await deleteRepository(repoName);
+    addSystemLog(`[SUCCESS] Repository "${repoName}" has been permanently deleted!`, 'success');
+    updateProgress(100, 'Complete!');
+    
+    // Update stats
+    await loadRepositories();
+    
+    // Update repo count
+    const statRepos = document.getElementById('statRepos');
+    if (statRepos) {
+      const currentCount = parseInt(statRepos.textContent) || 0;
+      statRepos.textContent = Math.max(0, currentCount - 1);
+    }
+    
+    setTimeout(() => hideProgress(), 1500);
+  } catch (err) {
+    addSystemLog(`[ERROR] Deletion failed: ${err.message}`, 'error');
+    hideProgress();
+  }
+}
+
+// =============== LOAD REPOSITORIES ===============
 async function loadRepositories() {
   if (!isAuthenticated) return;
   
@@ -351,6 +414,7 @@ async function loadRepositories() {
     
     if (repos.length === 0) {
       container.innerHTML = '<div style="text-align:center; padding:40px;">No repositories found</div>';
+      document.getElementById('statRepos').textContent = '0';
       return;
     }
     
@@ -368,47 +432,32 @@ async function loadRepositories() {
           <span>${repo.private ? '🔒 Private' : '🌍 Public'}</span>
           <span>⭐ ${repo.stargazers_count}</span>
           <span>🍴 ${repo.forks_count}</span>
+          <span>📅 ${new Date(repo.updated_at).toLocaleDateString()}</span>
         </div>
-        <a href="${repo.html_url}" target="_blank" class="repo-link">Open on GitHub →</a>
-        <button class="btn-outline-small delete-repo-btn" data-repo="${repo.name}" style="margin-top: 12px; width: 100%;">
-          <i class="fas fa-trash-alt"></i> Delete Repository
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          <a href="${repo.html_url}" target="_blank" class="repo-link" style="flex: 1; text-align: center;">
+            <i class="fab fa-github"></i> Open
+          </a>
+          <button class="btn-outline-small delete-repo-btn" data-repo="${repo.name}" style="flex: 1;">
+            <i class="fas fa-trash-alt"></i> Delete
+          </button>
+        </div>
       </div>
     `).join('');
     
-    // Add delete handlers
+    // Add delete handlers to all delete buttons
     document.querySelectorAll('.delete-repo-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const repoName = btn.dataset.repo;
-        if (confirm(`⚠️ Are you sure you want to delete "${repoName}"? This action cannot be undone!`)) {
+        if (confirm(`⚠️ PERINGATAN! Anda akan menghapus repository "${repoName}" secara permanen.\n\nTindakan ini TIDAK DAPAT DIBATALKAN!\n\nKlik OK untuk melanjutkan.`)) {
           await executeDeleteRepo(repoName);
-          await loadRepositories();
         }
       });
     });
     
   } catch (err) {
     container.innerHTML = `<div class="log-error" style="padding: 20px; text-align: center;">Error: ${err.message}</div>`;
-  }
-}
-
-async function executeDeleteRepo(repoName) {
-  showTerminal();
-  addSystemLog('[DANGER] Initiating repository deletion...', 'warning');
-  addSystemLog(`[TARGET] Repository: ${repoName}`, 'info');
-  addSystemLog('[WARNING] This action cannot be undone!', 'warning');
-  showProgress();
-  updateProgress(50, 'Deleting repository...');
-  
-  try {
-    await deleteRepository(repoName);
-    addSystemLog(`[SUCCESS] Repository "${repoName}" has been deleted!`, 'success');
-    updateProgress(100, 'Complete!');
-    setTimeout(() => hideProgress(), 1500);
-  } catch (err) {
-    addSystemLog(`[ERROR] Deletion failed: ${err.message}`, 'error');
-    hideProgress();
   }
 }
 
@@ -579,6 +628,3 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
-
-// =============== DELETE REPO FROM LIST ===============
-// Delete handler sudah ditambahkan di loadRepositories()
